@@ -1,0 +1,2 @@
+# AntiVibe
+### SAY RIP TO VIBE CODING
