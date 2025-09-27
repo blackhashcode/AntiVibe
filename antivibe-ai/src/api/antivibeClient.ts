@@ -1,4 +1,4 @@
-import axios from 'axios';
+import * as vscode from 'vscode';
 
 export interface HintRequest {
     code: string;
@@ -11,64 +11,71 @@ export interface HintResponse {
     hint: string;
     questions: string[];
     resources: string[];
-    nextStep: string;
+    next_step: string;
 }
 
 export class AntivibeClient {
     private baseUrl: string;
 
     constructor() {
-        // For now, we'll use a mock URL. Replace with your actual API URL later.
-        this.baseUrl = 'http://localhost:8000/api'; // Local development
+        // Use localhost for development
+        this.baseUrl = 'http://localhost:8000/api';
     }
 
     async getHint(request: HintRequest): Promise<HintResponse> {
         try {
-            // For Day 1, we'll mock the response
-            // Replace this with actual API call tomorrow
-            return this.mockHintResponse(request);
+            console.log('Sending request to Antivibe API:', request);
             
-            // Actual implementation (commented out for now):
-            // const response = await axios.post(`${this.baseUrl}/hint`, request);
-            // return response.data;
+            const response = await fetch(`${this.baseUrl}/hint`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    code: request.code,
+                    problem_description: request.problemDescription,
+                    error_message: request.errorMessage,
+                    hint_level: request.hintLevel
+                })
+            });
+
+            console.log('API response status:', response.status);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('API error details:', errorText);
+                throw new Error(`API error: ${response.status} - ${errorText}`);
+            }
+
+            const data = await response.json();
+            console.log('API response data:', data);
+            return data;
+            
         } catch (error) {
-            console.error('Error getting hint from Antivibe API:', error);
+            console.error('Error calling Antivibe API:', error);
+            vscode.window.showWarningMessage(
+                'Antivibe API not available. Using fallback hints. Make sure the backend server is running on localhost:8000'
+            );
             return this.getFallbackHint();
         }
     }
 
-    private mockHintResponse(request: HintRequest): HintResponse {
-        // Mock responses for testing
-        const mockHints = [
-            "Think about the time complexity of your current approach. What's the bottleneck?",
-            "Consider using a hash map to optimize lookups in this scenario.",
-            "Have you considered edge cases like empty input or duplicate values?",
-            "This problem pattern is similar to the two-pointer technique. How could you apply it here?"
-        ];
-
-        const mockQuestions = [
-            "What data structure would help optimize this solution?",
-            "How does your solution scale with large inputs?",
-            "What's the base case for this recursive approach?"
-        ];
-
-        return {
-            hint: mockHints[request.hintLevel - 1] || mockHints[0],
-            questions: mockQuestions,
-            resources: [
-                "https://leetcode.com/problems/two-sum/discuss/",
-                "https://www.geeksforgeeks.org/data-structures/"
-            ],
-            nextStep: "Try breaking the problem into smaller subproblems."
-        };
+    // Test if API is available
+    async testConnection(): Promise<boolean> {
+        try {
+            const response = await fetch(`${this.baseUrl}/health`);
+            return response.ok;
+        } catch (error) {
+            return false;
+        }
     }
 
     private getFallbackHint(): HintResponse {
         return {
-            hint: "Try approaching the problem step by step. What's the simplest case you can solve?",
-            questions: ["What part of the problem is most challenging?"],
-            resources: [],
-            nextStep: "Break the problem down into smaller pieces."
+            hint: "Try breaking the problem down into smaller subproblems. What's the simplest case you can solve first?",
+            questions: ["What part of the problem is most challenging right now?"],
+            resources: ["https://leetcode.com/explore/learn/"],
+            next_step: "Start with a brute force solution, then optimize."
         };
     }
 }
