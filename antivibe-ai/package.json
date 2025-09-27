@@ -1,0 +1,67 @@
+{
+    "name": "antivibe-ai",
+    "displayName": "Antivibe.ai",
+    "description": "AI-powered coding tutor that helps you learn instead of just giving answers",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.74.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onCommand:antivibe.getHint",
+        "onCommand:antivibe.analyzeCode"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "antivibe.getHint",
+                "title": "Antivibe: Get Hint",
+                "category": "Antivibe"
+            },
+            {
+                "command": "antivibe.analyzeCode",
+                "title": "Antivibe: Analyze Code",
+                "category": "Antivibe"
+            }
+        ],
+        "keybindings": [
+            {
+                "command": "antivibe.getHint",
+                "key": "ctrl+shift+h",
+                "mac": "cmd+shift+h"
+            }
+        ],
+        "menus": {
+            "command-palette": [
+                {
+                    "command": "antivibe.getHint",
+                    "when": "editorHasSelection"
+                }
+            ],
+            "editor/context": [
+                {
+                    "command": "antivibe.getHint",
+                    "group": "navigation",
+                    "when": "editorHasSelection"
+                }
+            ]
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./"
+    },
+    "devDependencies": {
+        "@types/mocha": "^10.0.10",
+        "@types/node": "^16.18.126",
+        "@types/vscode": "^1.104.0",
+        "typescript": "^4.9.4"
+    },
+    "dependencies": {
+        "axios": "^1.12.2"
+    }
+}
