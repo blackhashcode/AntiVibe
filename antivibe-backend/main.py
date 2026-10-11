@@ -1,20 +1,23 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 import enum
 import random
+import re
 
-app = FastAPI(title="Antivibe.ai API", version="0.1.0")
-
-# CORS middleware to allow VS Code extension to call the API
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+from problems import (
+    HINT_LABELS, MILESTONES, PROBLEMS, TRACKS, format_example, required_names, starter_code
 )
+
+app = FastAPI(title="Antivibe.ai API", version="0.3.0")
+
+# No CORS middleware on purpose: the VS Code extension calls this API from the
+# extension host (not a browser page), so it doesn't need CORS, and leaving it
+# out stops arbitrary websites from reading this local server.
+
+PROBLEMS_BY_ID = {problem["id"]: problem for problem in PROBLEMS}
+MILESTONES_BY_ID = {milestone["id"]: milestone for milestone in MILESTONES}
+
 
 # Data models
 class HintLevel(int, enum.Enum):
@@ -35,6 +38,147 @@ class HintResponse(BaseModel):
     resources: List[str]
     next_step: str
 
+class ProblemSummary(BaseModel):
+    id: str
+    title: str
+    difficulty: str
+    track_id: str
+    track: str
+    milestone_id: str
+    milestone: str
+
+class ProblemList(BaseModel):
+    problems: List[ProblemSummary]
+
+class FunctionSpec(BaseModel):
+    name: str
+    params: List[str]
+
+class ProblemDetail(ProblemSummary):
+    description: str
+    function: Optional[FunctionSpec] = None
+    starter: str
+    requires: List[str]
+    compare: str
+    examples: List[str]
+    tests: List[Dict[str, Any]]
+    hint_count: int
+
+class ProblemHint(BaseModel):
+    level: int
+    label: str
+    hint: str
+
+class ProblemHints(BaseModel):
+    problem_id: str
+    title: str
+    total: int
+    hints: List[ProblemHint]
+    questions: List[str]
+    resources: List[str]
+    next_step: str
+
+class LessonSection(BaseModel):
+    heading: str
+    text: str
+    code: Optional[str] = None
+
+class MilestoneSummary(BaseModel):
+    id: str
+    title: str
+    summary: str
+    track_id: str
+    track: str
+    problems: List[ProblemSummary]
+
+class MilestoneDetail(MilestoneSummary):
+    lesson: List[LessonSection]
+
+class TrackSummary(BaseModel):
+    id: str
+    title: str
+    description: str
+    milestones: List[MilestoneSummary]
+
+class Curriculum(BaseModel):
+    tracks: List[TrackSummary]
+
+
+# ---------------------------------------------------------------------------
+# Curriculum
+# ---------------------------------------------------------------------------
+
+@app.get("/api/curriculum", response_model=Curriculum)
+async def get_curriculum():
+    """Tracks, milestones and problem titles, in learning order (no lessons, tests or hints)."""
+    return {"tracks": TRACKS}
+
+@app.get("/api/milestones/{milestone_id}", response_model=MilestoneDetail)
+async def get_milestone(milestone_id: str):
+    milestone = MILESTONES_BY_ID.get(milestone_id)
+    if milestone is None:
+        raise HTTPException(status_code=404, detail=f"Unknown milestone: {milestone_id}")
+    return milestone
+
+
+# ---------------------------------------------------------------------------
+# Practice problems
+# ---------------------------------------------------------------------------
+
+# What to do after reading the hint at each level
+PROBLEM_NEXT_STEPS = {
+    1: "Sit with this idea and try again before asking for more. Sketching an example on paper helps.",
+    2: "Try to turn this approach into code on your own. Run the tests to see how far you get.",
+    3: "You have the key details now. Write it out and use the failing test cases to guide you.",
+    4: "That was the last hint - there is no full solution here. Translate the structure into code line by line.",
+}
+
+def get_problem_or_404(problem_id: str) -> dict:
+    problem = PROBLEMS_BY_ID.get(problem_id)
+    if problem is None:
+        raise HTTPException(status_code=404, detail=f"Unknown problem: {problem_id}")
+    return problem
+
+@app.get("/api/problems", response_model=ProblemList)
+async def list_problems():
+    return {"problems": PROBLEMS}
+
+@app.get("/api/problems/{problem_id}", response_model=ProblemDetail)
+async def get_problem(problem_id: str):
+    problem = get_problem_or_404(problem_id)
+    return {
+        **problem,
+        "starter": starter_code(problem),
+        "requires": required_names(problem),
+        "examples": [format_example(problem, test) for test in problem["tests"][:2]],
+        "hint_count": len(problem["hints"]),
+    }
+
+@app.get("/api/problems/{problem_id}/hints", response_model=ProblemHints)
+async def get_problem_hints(problem_id: str, upto: int = Query(1, ge=1)):
+    """Return hints 1..upto for a problem. Hints are revealed in order."""
+    problem = get_problem_or_404(problem_id)
+    total = len(problem["hints"])
+    upto = min(upto, total)
+
+    return {
+        "problem_id": problem["id"],
+        "title": problem["title"],
+        "total": total,
+        "hints": [
+            {"level": level, "label": HINT_LABELS[level], "hint": problem["hints"][level - 1]}
+            for level in range(1, upto + 1)
+        ],
+        "questions": problem["questions"],
+        "resources": problem.get("resources", []),
+        "next_step": PROBLEM_NEXT_STEPS[upto],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Free-form hints (for code that isn't one of the practice problems)
+# ---------------------------------------------------------------------------
+
 # Add a general hints fallback
 GENERAL_HINTS = {
     1: ["Think about the problem step by step. What's the simplest case?", "Consider the time and space complexity of your approach."],
@@ -43,23 +187,33 @@ GENERAL_HINTS = {
     4: ["Write pseudocode before implementing.", "Test your solution with sample inputs first."]
 }
 
-# Problem type classification (simple keyword matching)
-def classify_problem(description: str, code: str) -> str:
+# Problem type classification: weighted phrases, highest score wins
+PROBLEM_KEYWORDS = {
+    "two_sum": {"two sum": 3, "two numbers": 2, "add up": 2, "complement": 2, "pair": 1, "target": 1},
+    "string_reversal": {"reverse": 2, "reversed": 2, "palindrome": 2, "string": 1},
+    "binary_search": {"binary search": 3, "log n": 2, "sorted": 1, "search": 1, "rotated": 1},
+    "linked_list": {"linked list": 3, "node": 1, "pointer": 1, "cycle": 1},
+}
+
+# A problem type needs at least this score, otherwise the hints are general
+MIN_CLASSIFY_SCORE = 2
+
+def classify_problem(description: str) -> str:
     if not description:
         return "general"
-    
+
     description_lower = description.lower()
-    
-    if any(word in description_lower for word in ['sum', 'add', 'two numbers', 'target']):
-        return "two_sum"
-    elif any(word in description_lower for word in ['reverse', 'palindrome', 'string']):
-        return "string_reversal"
-    elif any(word in description_lower for word in ['binary', 'search', 'sorted', 'array']):
-        return "binary_search"
-    elif any(word in description_lower for word in ['linked list', 'node', 'pointer']):
-        return "linked_list"
-    else:
-        return "general"
+
+    best_type, best_score = "general", 0
+    for problem_type, keywords in PROBLEM_KEYWORDS.items():
+        score = sum(
+            weight for phrase, weight in keywords.items()
+            if re.search(rf"\b{re.escape(phrase)}", description_lower)
+        )
+        if score > best_score:
+            best_type, best_score = problem_type, score
+
+    return best_type if best_score >= MIN_CLASSIFY_SCORE else "general"
 
 # Hard-coded hints database
 HINT_DATABASE = {
@@ -80,7 +234,7 @@ HINT_DATABASE = {
             "Handle edge cases: empty array, no solution, duplicate numbers."
         ],
         4: [
-            "Algorithm: 1) Create hash map, 2) For i, num in enumerate(nums), 3) complement = target - num, 4) If complement in map, return [map[complement], i], 5) Else map[num] = i",
+            "Structure: 1) Create a hash map, 2) Loop over the numbers with their indices, 3) Work out the complement of the current number, 4) If the complement is in the map you have your pair, 5) Otherwise remember the current number and its index.",
             "Time: O(n), Space: O(n). Consider what happens with duplicates and why the order matters."
         ]
     },
@@ -96,12 +250,12 @@ HINT_DATABASE = {
             "Calculate the middle index and compare with target."
         ],
         3: [
-            "Initialize left=0, right=len(arr)-1. While left <= right, calculate mid = (left+right)//2.",
-            "If arr[mid] == target: return mid. If arr[mid] < target: left = mid+1, else right = mid-1.",
-            "Handle cases where target is not found and avoid integer overflow with mid calculation."
+            "Start with left at the first index and right at the last. Loop while the range is non-empty and look at the middle element.",
+            "Each comparison with the middle element should discard half the range - make sure you also discard the middle itself.",
+            "Handle cases where target is not found, and check your loop on lists of length 0, 1 and 2."
         ],
         4: [
-            "Template: left, right = 0, n-1; while left <= right: mid = left + (right-left)//2; if nums[mid]==target: return mid; elif nums[mid]<target: left=mid+1; else: right=mid-1; return -1",
+            "Structure: keep left and right; while left <= right: compute mid; if the middle value is the target you're done; if it's too small move left past mid; otherwise move right before mid; if the loop ends the target isn't there.",
             "Consider variations: first/last occurrence, search in rotated array, infinite array."
         ]
     },
@@ -122,8 +276,28 @@ HINT_DATABASE = {
             "Pythonic: s[::-1] but understand how it works internally."
         ],
         4: [
-            "Two-pointer: def reverse_string(s): chars = list(s); l, r = 0, len(chars)-1; while l < r: chars[l], chars[r] = chars[r], chars[l]; l += 1; r -= 1; return ''.join(chars)",
+            "Structure (two pointers): turn the string into a list of characters; put one index at each end; while they haven't met, swap the two characters and move both inwards; join the list back into a string.",
             "Consider edge cases: empty string, single char, palindrome, Unicode characters."
+        ]
+    },
+    "linked_list": {
+        1: [
+            "Draw the list as boxes and arrows. Which arrows have to change, and in what order?",
+            "Think about what you lose access to the moment you overwrite a node's next pointer."
+        ],
+        2: [
+            "Most linked list problems come down to walking the list with one or two pointers.",
+            "Two pointers moving at different speeds can find the middle of a list or detect a cycle.",
+            "A dummy node in front of the head often removes special cases for the first element."
+        ],
+        3: [
+            "Before changing node.next, save the old next node in a variable so you can keep walking.",
+            "Check your loop condition against an empty list and a single-node list.",
+            "For fast/slow pointers, make sure fast and fast.next both exist before advancing two steps."
+        ],
+        4: [
+            "Structure for a traversal that rewires pointers: keep prev and current; loop while current exists: remember current.next, repoint current.next, then advance prev and current.",
+            "Structure for fast/slow: both start at the head; loop while fast and fast.next exist: slow moves one step, fast moves two; inspect where they end up."
         ]
     },
     "general": GENERAL_HINTS
@@ -149,6 +323,12 @@ QUESTION_DATABASE = {
         "What's the time and space complexity of each approach?",
         "How would you reverse words in a sentence?"
     ],
+    "linked_list": [
+        "What happens to your code on an empty list?",
+        "Which pointers change, and which node becomes the new head?",
+        "Can you solve it with O(1) extra space?",
+        "How would you test it without a debugger?"
+    ],
     "general": [
         "What's the time complexity of your approach?",
         "How would you handle edge cases?",
@@ -170,6 +350,10 @@ RESOURCE_DATABASE = {
         "https://leetcode.com/problems/reverse-string/",
         "https://www.geeksforgeeks.org/reverse-string-python-5-different-ways/",
     ],
+    "linked_list": [
+        "https://leetcode.com/explore/learn/card/linked-list/",
+        "https://www.geeksforgeeks.org/data-structures/linked-list/",
+    ],
     "general": [
         "https://leetcode.com/explore/learn/",
         "https://www.geeksforgeeks.org/data-structures/"
@@ -178,49 +362,34 @@ RESOURCE_DATABASE = {
 
 @app.get("/")
 async def root():
-    return {"message": "Antivibe.ai API is running!", "version": "0.1.0"}
+    return {"message": "Antivibe.ai API is running!", "version": app.version}
 
 @app.post("/api/hint", response_model=HintResponse)
 async def get_hint(request: HintRequest):
-    try:
-        print(f"Received request: {request}")  # Debug log
-        
-        # Classify the problem type
-        problem_type = classify_problem(request.problem_description, request.code)
-        print(f"Classified as: {problem_type}")  # Debug log
-        
-        # Get hints for the problem type and level
-        hints = HINT_DATABASE.get(problem_type, HINT_DATABASE["general"])
-        level_hints = hints.get(request.hint_level.value, hints[1])  # Use .value for enum
-        
-        # Select a random hint
-        selected_hint = random.choice(level_hints) if level_hints else "Think about the problem step by step."
-        
-        # Get questions and resources
-        questions = QUESTION_DATABASE.get(problem_type, QUESTION_DATABASE["general"])
-        resources = RESOURCE_DATABASE.get(problem_type, RESOURCE_DATABASE["general"])
-        
-        # Next step suggestion
-        next_steps = [
-            "Try implementing this approach with sample inputs.",
-            "Test your solution with edge cases.",
-            "Consider how you would explain this solution to someone else.",
-            "Think about alternative approaches and compare them."
-        ]
-        
-        response = HintResponse(
-            hint=selected_hint,
-            questions=random.sample(questions, min(2, len(questions))),
-            resources=random.sample(resources, min(2, len(resources))),
-            next_step=random.choice(next_steps)
-        )
-        
-        print(f"Sending response: {response}")  # Debug log
-        return response
-        
-    except Exception as e:
-        print(f"Error: {str(e)}")  # Debug log
-        raise HTTPException(status_code=500, detail=f"Error generating hint: {str(e)}")
+    # Classify the problem type
+    problem_type = classify_problem(request.problem_description)
+
+    # Get hints for the problem type and level
+    level_hints = HINT_DATABASE[problem_type][request.hint_level.value]
+
+    # Get questions and resources
+    questions = QUESTION_DATABASE[problem_type]
+    resources = RESOURCE_DATABASE[problem_type]
+
+    # Next step suggestion
+    next_steps = [
+        "Try implementing this approach with sample inputs.",
+        "Test your solution with edge cases.",
+        "Consider how you would explain this solution to someone else.",
+        "Think about alternative approaches and compare them."
+    ]
+
+    return HintResponse(
+        hint=random.choice(level_hints),
+        questions=random.sample(questions, min(2, len(questions))),
+        resources=random.sample(resources, min(2, len(resources))),
+        next_step=random.choice(next_steps)
+    )
 
 @app.get("/api/health")
 async def health_check():
@@ -232,4 +401,4 @@ async def get_problem_types():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)

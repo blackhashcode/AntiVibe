@@ -1,67 +1,149 @@
 {
     "name": "antivibe-ai",
     "displayName": "Antivibe.ai",
-    "description": "AI-powered coding tutor that helps you learn instead of just giving answers",
-    "version": "0.0.1",
+    "description": "Milestone-based coding tutor: learn Python, OOP and DSA by writing the code yourself, with lessons, instant tests and progressive hints",
+    "version": "0.2.0",
     "engines": {
-        "vscode": "^1.74.0"
+        "vscode": "^1.85.0"
     },
     "categories": [
-        "Other"
-    ],
-    "activationEvents": [
-        "onCommand:antivibe.getHint",
-        "onCommand:antivibe.analyzeCode"
+        "Education"
     ],
     "main": "./out/extension.js",
     "contributes": {
         "commands": [
+            {
+                "command": "antivibe.continue",
+                "title": "Antivibe: Continue Learning",
+                "category": "Antivibe",
+                "icon": "$(play)"
+            },
+            {
+                "command": "antivibe.startProblem",
+                "title": "Antivibe: Pick an Exercise",
+                "category": "Antivibe"
+            },
+            {
+                "command": "antivibe.openLesson",
+                "title": "Antivibe: Open Lesson",
+                "category": "Antivibe"
+            },
+            {
+                "command": "antivibe.checkSolution",
+                "title": "Antivibe: Check My Solution",
+                "category": "Antivibe"
+            },
             {
                 "command": "antivibe.getHint",
                 "title": "Antivibe: Get Hint",
                 "category": "Antivibe"
             },
             {
-                "command": "antivibe.analyzeCode",
-                "title": "Antivibe: Analyze Code",
+                "command": "antivibe.refresh",
+                "title": "Antivibe: Refresh Learning Path",
+                "category": "Antivibe",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "antivibe.resetProgress",
+                "title": "Antivibe: Reset Progress",
                 "category": "Antivibe"
+            }
+        ],
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "antivibe",
+                    "title": "Antivibe",
+                    "icon": "media/antivibe.svg"
+                }
+            ]
+        },
+        "views": {
+            "antivibe": [
+                {
+                    "id": "antivibe.curriculum",
+                    "name": "Learning Path"
+                }
+            ]
+        },
+        "viewsWelcome": [
+            {
+                "view": "antivibe.curriculum",
+                "contents": "Antivibe can't reach its backend.\nStart it from the antivibe-backend folder:\nuvicorn main:app --port 8000\n[Try Again](command:antivibe.refresh)",
+                "when": "antivibe.backendDown"
             }
         ],
         "keybindings": [
             {
                 "command": "antivibe.getHint",
                 "key": "ctrl+shift+h",
-                "mac": "cmd+shift+h"
+                "mac": "cmd+shift+h",
+                "when": "editorTextFocus"
+            },
+            {
+                "command": "antivibe.checkSolution",
+                "key": "ctrl+alt+t",
+                "mac": "cmd+alt+t",
+                "when": "editorTextFocus && editorLangId == python"
             }
         ],
         "menus": {
-            "command-palette": [
-                {
-                    "command": "antivibe.getHint",
-                    "when": "editorHasSelection"
-                }
-            ],
             "editor/context": [
                 {
                     "command": "antivibe.getHint",
+                    "group": "navigation"
+                },
+                {
+                    "command": "antivibe.checkSolution",
                     "group": "navigation",
-                    "when": "editorHasSelection"
+                    "when": "editorLangId == python"
+                }
+            ],
+            "view/title": [
+                {
+                    "command": "antivibe.continue",
+                    "when": "view == antivibe.curriculum",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "antivibe.refresh",
+                    "when": "view == antivibe.curriculum",
+                    "group": "navigation@2"
                 }
             ]
+        },
+        "configuration": {
+            "title": "Antivibe.ai",
+            "properties": {
+                "antivibe.apiUrl": {
+                    "type": "string",
+                    "default": "http://localhost:8000/api",
+                    "description": "Base URL of the Antivibe backend API."
+                },
+                "antivibe.pythonPath": {
+                    "type": "string",
+                    "default": "python",
+                    "description": "Python 3 interpreter used to run your solutions against the tests."
+                },
+                "antivibe.lockMilestones": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Keep each milestone locked until every exercise in the one before it is solved. Turn off to open any exercise."
+                }
+            }
         }
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
-        "watch": "tsc -watch -p ./"
+        "watch": "tsc -watch -p ./",
+        "test": "npm run compile && node --test out/test/unit/",
+        "test:integration": "npm run compile && node scripts/run-integration.mjs"
     },
     "devDependencies": {
-        "@types/mocha": "^10.0.10",
-        "@types/node": "^16.18.126",
-        "@types/vscode": "^1.104.0",
+        "@types/node": "^18.19.0",
+        "@types/vscode": "~1.85.0",
         "typescript": "^4.9.4"
-    },
-    "dependencies": {
-        "axios": "^1.12.2"
     }
 }
