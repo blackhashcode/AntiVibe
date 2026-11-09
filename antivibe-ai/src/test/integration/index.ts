@@ -90,6 +90,13 @@ export async function run(): Promise<void> {
     await replaceInEditor('    pass', '    return [total_minutes // 60, total_minutes % 60]');
     assert.strictEqual((await check()).allPassed, true);
 
+    // A Debug exercise starts from buggy code that fails until it is fixed
+    await start('average-of-two');
+    assert.match(activeEditor().document.getText(), /# Plan - before any code/);
+    assert.strictEqual((await check()).passed, 0);
+    await replaceInEditor('    print(total / 2)', '    return total / 2');
+    assert.strictEqual((await check()).allPassed, true);
+
     assert.ok(await start('is-even'), 'the second milestone should be unlocked now');
     assert.strictEqual(await start('sum-to'), undefined, 'the third milestone should still be locked');
 
@@ -120,6 +127,48 @@ export async function run(): Promise<void> {
         revealed.push(hints.hints.length);
     }
     assert.deepStrictEqual(revealed, [1, 2, 3, 4, 4]);
+
+    // Everything above was written to the history file, next to the practice files
+    const historyPath = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'antivibe-practice', 'history.jsonl');
+    const events = Buffer.from(await vscode.workspace.fs.readFile(historyPath)).toString('utf8')
+        .trim().split('\n').map(line => JSON.parse(line));
+    const kinds = new Set(events.map(e => e.event));
+    for (const kind of ['open', 'lesson', 'check', 'hint']) {
+        assert.ok(kinds.has(kind), `no "${kind}" event in the history`);
+    }
+    const checks = events.filter(e => e.event === 'check' && e.problem === 'rectangle-area');
+    assert.deepStrictEqual(checks.map(e => e.attempt), [1, 2, 3]);
+    assert.deepStrictEqual(checks.map(e => e.all_passed), [false, false, true]);
+    assert.strictEqual(checks[2].first_solve, true);
+    assert.match(checks[2].code, /return width \* height/);
+    assert.ok(events.some(e => e.event === 'large_insert' && e.problem === 'bank-account'));
+    assert.ok(events.some(e => e.event === 'check' && e.cases.some((c: any) => c.edge === 'invalid input')));
+
+    // Switching to C++: its own folder, its own progress, compiled tests
+    await vscode.workspace.getConfiguration('antivibe').update('lockMilestones', true, vscode.ConfigurationTarget.Workspace);
+    await vscode.workspace.getConfiguration('antivibe').update('language', 'cpp', vscode.ConfigurationTarget.Workspace);
+    await vscode.commands.executeCommand('antivibe.continue');
+    editor = activeEditor();
+    assert.match(editor.document.uri.fsPath, /antivibe-practice[\\/]cpp[\\/]rectangle_area\.cpp$/);
+    assert.match(editor.document.getText(), /^\/\/ antivibe-problem: rectangle-area/);
+    assert.strictEqual(await start('is-even'), undefined, 'C++ progress is separate, so its milestone 2 is locked');
+
+    result = await check();
+    assert.strictEqual(result.loadError, undefined, JSON.stringify(result.loadError));
+    assert.strictEqual(result.allPassed, false);
+    await replaceInEditor('    // your code here\n    return 0.0;', '    return width * height;');
+    result = await check();
+    assert.strictEqual(result.allPassed, true, JSON.stringify(result.cases));
+
+    await replaceInEditor('return width * height;', 'return width * height');
+    result = await check();
+    assert.match(result.loadError?.message ?? '', /does not compile/);
+
+    await vscode.commands.executeCommand('antivibe.continue');
+    assert.match(activeEditor().document.uri.fsPath, /cpp[\\/]full_name\.cpp$/);
+    const cppEvents = Buffer.from(await vscode.workspace.fs.readFile(historyPath)).toString('utf8')
+        .trim().split('\n').map(line => JSON.parse(line)).filter(e => e.language === 'cpp');
+    assert.ok(cppEvents.some(e => e.event === 'check' && e.problem === 'rectangle-area' && e.all_passed));
 
     // Checking a file that isn't an exercise is refused politely
     const other = await vscode.workspace.openTextDocument({ language: 'python', content: 'x = 1\n' });

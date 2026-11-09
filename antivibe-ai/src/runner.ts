@@ -1,7 +1,13 @@
 import { spawn } from 'child_process';
-import { TestCase } from './api/antivibeClient';
+import { Signature, TestCase } from './api/antivibeClient';
 
 export interface TestSpec {
+    /** python (default), cpp or java */
+    language?: string;
+    /** For C++ and Java: the function `args` tests call */
+    signature?: Signature | null;
+    /** The C++ compiler to use */
+    compiler?: string;
     /** The function called by `args` tests; null for problems tested only through snippets */
     function: string | null;
     /** Names the solution has to define */
@@ -25,6 +31,14 @@ export interface CaseResult {
     /** Whatever the solution printed while this case ran */
     printed?: string;
     note?: string;
+    /** The edge case this test covers, if it is one */
+    edge?: string;
+}
+
+/** Advice about how the code is written, independent of whether it passes */
+export interface ReviewNote {
+    line: number;
+    message: string;
 }
 
 export interface RunResult {
@@ -35,6 +49,7 @@ export interface RunResult {
     total: number;
     allPassed: boolean;
     timedOut: boolean;
+    review: ReviewNote[];
 }
 
 export interface RunOptions {
@@ -100,7 +115,7 @@ export function runTests(options: RunOptions): Promise<RunResult> {
 /** How a test reads when the harness never got far enough to describe it itself. */
 function describeCall(spec: TestSpec, test: TestCase): string {
     if (test.args) {
-        return `${spec.function}(${test.args.map(arg => JSON.stringify(arg)).join(', ')})`;
+        return `${spec.function ?? spec.signature?.name}(${test.args.map(arg => JSON.stringify(arg)).join(', ')})`;
     }
     return [test.setup, test.check].filter(Boolean).join('\n');
 }
@@ -122,7 +137,7 @@ function collectResults(spec: TestSpec, stdout: string, stderr: string, timedOut
     if (loadError) {
         return {
             loadError: { message: loadError.message, line: loadError.line ?? undefined },
-            cases: [], passed: 0, total, allPassed: false, timedOut: false
+            cases: [], passed: 0, total, allPassed: false, timedOut: false, review: []
         };
     }
 
@@ -136,6 +151,7 @@ function collectResults(spec: TestSpec, stdout: string, stderr: string, timedOut
         const result = messages.find(m => m.type === 'case' && m.index === index);
         const display = {
             index,
+            edge: test.edge,
             call: start?.call ?? describeCall(spec, test),
             expected: start?.expected ?? (test.raises ? `raises ${test.raises}` : JSON.stringify(test.expected))
         };
@@ -156,5 +172,6 @@ function collectResults(spec: TestSpec, stdout: string, stderr: string, timedOut
     });
 
     const passed = cases.filter(c => c.status === 'pass').length;
-    return { cases, passed, total, allPassed: passed === total, timedOut };
+    const review: ReviewNote[] = messages.find(m => m.type === 'review')?.notes ?? [];
+    return { cases, passed, total, allPassed: passed === total, timedOut, review };
 }

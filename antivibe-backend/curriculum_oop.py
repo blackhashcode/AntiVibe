@@ -34,6 +34,28 @@ TRACK = {
                     "heading": "Common mistakes",
                     "text": "Forgetting `self.` creates an ordinary local variable that vanishes when the method ends: `tricks = 0` inside `__init__` sets nothing on the object.\n\nForgetting `self` in a method's parameter list gives 'takes 0 positional arguments but 1 was given'.\n\nIf an answer depends on attributes that can change, compute it in a method each time instead of storing it once in `__init__`.",
                 },
+                {
+                    "heading": "Attributes can hold lists",
+                    "text": "An attribute can hold any value - a number, a string, or a whole list or dictionary. Create the empty list in `__init__`, so every object gets its own, and then use `self.books` in the methods exactly like any other list. This pattern - a class that keeps a list and offers methods to work with it - is how most data structures are built.",
+                    "code": "class Shelf:\n    def __init__(self):\n        self.books = []           # every Shelf starts with its own empty list\n\n    def add(self, title):\n        self.books.append(title)\n\n    def count(self):\n        return len(self.books)\n\nshelf = Shelf()\nshelf.add(\"Dune\")\nshelf.count()       # 1",
+                },
+            ],
+            "quiz": [
+                {
+                    "question": "What are `a.items` and `b.items` at the end?",
+                    "code": "class Box:\n    def __init__(self):\n        self.items = []\n\n    def put(self, x):\n        self.items.append(x)\n\na = Box()\nb = Box()\na.put(1)\na.put(2)\nb.put(3)",
+                    "answer": "`a.items` is `[1, 2]` and `b.items` is `[3]`. Each Box got its own list when `__init__` ran.",
+                },
+                {
+                    "question": "What happens on the last line?",
+                    "code": "class Light:\n    def __init__(self):\n        on = False\n\n    def is_on(self):\n        return self.on\n\nLight().is_on()",
+                    "answer": "An `AttributeError`: the object has no attribute `on`. `on = False` without `self.` made an ordinary local variable that vanished when `__init__` finished.",
+                },
+                {
+                    "question": "What is `d.name` at the end?",
+                    "code": "class Dog:\n    def __init__(self, name):\n        self.name = name\n\n    def rename(self, new_name):\n        self.name = new_name\n\nd = Dog(\"Rex\")\ne = d\ne.rename(\"Max\")",
+                    "answer": "`'Max'`. `e = d` does not copy the dog - d and e are two names for the same object, just like two names for one list.",
+                },
             ],
             "problems": [
                 {
@@ -56,9 +78,9 @@ TRACK = {
                     "compare": "exact",
                     "tests": [
                         {"setup": "c = Counter()\nc.increment()\nc.increment()", "check": "c.count", "expected": 2},
-                        {"setup": "c = Counter()", "check": "c.count", "expected": 0},
+                        {"edge": "brand-new object", "setup": "c = Counter()", "check": "c.count", "expected": 0},
                         {"setup": "c = Counter()\nc.increment()\nc.reset()", "check": "c.count", "expected": 0},
-                        {"setup": "a = Counter()\nb = Counter()\na.increment()", "check": "[a.count, b.count]", "expected": [1, 0]},
+                        {"edge": "two separate objects", "setup": "a = Counter()\nb = Counter()\na.increment()", "check": "[a.count, b.count]", "expected": [1, 0]},
                         {"setup": "c = Counter()\nfor _ in range(5):\n    c.increment()", "check": "c.count", "expected": 5},
                     ],
                     "hints": [
@@ -70,6 +92,32 @@ TRACK = {
                     "questions": [
                         "Why do two Counter objects not share their count?",
                         "What happens if you write count = 0 instead of self.count = 0?",
+                    ],
+                },
+                {
+                    "id": "light-switch",
+                    "title": "Debug: Light Switch",
+                    "difficulty": "easy",
+                    "description": "A LightSwitch starts off. toggle() flips it between off and on, and is_on() returns True when it is on. The class has two bugs - both are about self. Fix them.",
+                    "starter": "class LightSwitch:\n    def __init__(self):\n        on = False\n\n    def toggle(self):\n        self.on = not self.on\n\n    def is_on():\n        return self.on\n",
+                    "requires": ["LightSwitch"],
+                    "compare": "exact",
+                    "tests": [
+                        {"edge": "brand-new object", "check": "LightSwitch().is_on()", "expected": False},
+                        {"setup": "s = LightSwitch()\ns.toggle()", "check": "s.is_on()", "expected": True},
+                        {"setup": "s = LightSwitch()\ns.toggle()\ns.toggle()", "check": "s.is_on()", "expected": False},
+                        {"edge": "two separate objects", "setup": "a = LightSwitch()\nb = LightSwitch()\na.toggle()", "check": "[a.is_on(), b.is_on()]", "expected": [True, False]},
+                        {"setup": "s = LightSwitch()", "check": "s.on", "expected": False},
+                    ],
+                    "hints": [
+                        "Read the error in each failing test carefully - they point at two different lines.",
+                        "One error says a method takes 0 arguments but 1 was given. Python passes the object itself into every method call. The other says the object has no attribute on.",
+                        "Every method needs self as its first parameter. And a value only becomes part of the object when you assign it through self.",
+                        "Structure: in __init__, write self.on = False; give is_on the parameter self.",
+                    ],
+                    "questions": [
+                        "Why does `s.is_on()` count as passing one argument?",
+                        "What does `not` do to True and to False?",
                     ],
                 },
                 {
@@ -97,9 +145,9 @@ TRACK = {
                         {"check": "Rectangle(3, 4).area()", "expected": 12},
                         {"check": "Rectangle(3, 4).perimeter()", "expected": 14},
                         {"check": "Rectangle(3, 4).is_square()", "expected": False},
-                        {"check": "Rectangle(5, 5).is_square()", "expected": True},
+                        {"edge": "square", "check": "Rectangle(5, 5).is_square()", "expected": True},
                         {"setup": "r = Rectangle(3, 4)", "check": "[r.width, r.height]", "expected": [3, 4]},
-                        {"setup": "r = Rectangle(3, 4)\nr.width = 10", "check": "r.area()", "expected": 40},
+                        {"edge": "attribute changed after creation", "setup": "r = Rectangle(3, 4)\nr.width = 10", "check": "r.area()", "expected": 40},
                     ],
                     "hints": [
                         "The object has to remember the two numbers it was created with, so its methods can use them later.",
@@ -110,6 +158,34 @@ TRACK = {
                     "questions": [
                         "Why would storing self.area in __init__ fail the last test?",
                         "What is the difference between the parameter width and the attribute self.width?",
+                    ],
+                },
+                {
+                    "id": "playlist",
+                    "title": "Playlist",
+                    "difficulty": "easy",
+                    "description": "Write a class Playlist. A new playlist is empty. Its attribute songs is the list of song titles in the order they were added. add(song) adds a title to the end, count() returns how many songs it holds, has(song) returns True if that title is in it, and remove(song) removes the first copy of that title - raising ValueError if it is not there.",
+                    "starter": "class Playlist:\n    def __init__(self):\n        pass\n\n    def add(self, song):\n        pass\n\n    def count(self):\n        pass\n\n    def has(self, song):\n        pass\n\n    def remove(self, song):\n        pass\n",
+                    "requires": ["Playlist"],
+                    "compare": "exact",
+                    "tests": [
+                        {"setup": "p = Playlist()\np.add('Intro')\np.add('Hello')", "check": "p.songs", "expected": ["Intro", "Hello"]},
+                        {"setup": "p = Playlist()\np.add('Intro')\np.add('Hello')", "check": "p.count()", "expected": 2},
+                        {"edge": "brand-new object", "check": "Playlist().count()", "expected": 0},
+                        {"setup": "p = Playlist()\np.add('A')", "check": "[p.has('A'), p.has('B')]", "expected": [True, False]},
+                        {"edge": "duplicate titles", "setup": "p = Playlist()\np.add('A')\np.add('B')\np.add('A')\np.remove('A')", "check": "p.songs", "expected": ["B", "A"]},
+                        {"setup": "p = Playlist()", "check": "p.remove('X')", "raises": "ValueError"},
+                        {"edge": "two separate objects", "setup": "a = Playlist()\nb = Playlist()\na.add('A')", "check": "b.songs", "expected": []},
+                    ],
+                    "hints": [
+                        "The playlist has to remember a sequence of titles between method calls. Which built-in type keeps things in order, and where does the object keep it?",
+                        "Create an empty list in __init__ and store it as self.songs. Every other method is one line that uses that list - see 'Attributes can hold lists' in the lesson.",
+                        "append adds to the end, len counts, `in` checks membership, and a list's remove(x) deletes the first x - it already raises ValueError when x is missing.",
+                        "Structure: __init__ sets self.songs = []; add appends song to self.songs; count returns len(self.songs); has returns song in self.songs; remove calls self.songs.remove(song).",
+                    ],
+                    "questions": [
+                        "Why must the empty list be created inside __init__ and not shared?",
+                        "Which method would you add to move a song to the top?",
                     ],
                 },
             ],
@@ -145,6 +221,23 @@ TRACK = {
                     "code": "    def doubled(self):\n        return Money(self.amount * 2)",
                 },
             ],
+            "quiz": [
+                {
+                    "question": "What is the value of the last line?",
+                    "code": "class Money:\n    def __init__(self, amount):\n        self.amount = amount\n\n    def __str__(self):\n        return f\"${self.amount}\"\n\nm = Money(5)\n[str(m), m.amount]",
+                    "answer": "`['$5', 5]`. `str(m)` calls `__str__`; `m.amount` is still the plain number.",
+                },
+                {
+                    "question": "What is the value of the last line?",
+                    "code": "class P:\n    def __init__(self, x):\n        self.x = x\n\n[P(1) == P(1), P(1).x == P(1).x]",
+                    "answer": "`[False, True]`. Without `__eq__`, two different objects are never equal, even with identical attributes. Their x values, being plain numbers, are.",
+                },
+                {
+                    "question": "What is `a.balance` at the end?",
+                    "code": "class Account:\n    def __init__(self):\n        self.balance = 10\n\n    def withdraw(self, amount):\n        self.balance = self.balance - amount\n        if self.balance < 0:\n            raise ValueError(\"not enough money\")\n\na = Account()\ntry:\n    a.withdraw(50)\nexcept ValueError:\n    pass",
+                    "answer": "`-40`. The balance was changed before the check, so the error came too late to protect it. Check first, then change.",
+                },
+            ],
             "problems": [
                 {
                     "id": "bank-account",
@@ -157,13 +250,13 @@ TRACK = {
                     "tests": [
                         {"setup": "a = BankAccount('Ann', 100)\na.deposit(50)", "check": "a.balance", "expected": 150},
                         {"setup": "a = BankAccount('Ann', 100)", "check": "a.withdraw(500)", "raises": "ValueError"},
-                        {"check": "BankAccount('Ann').balance", "expected": 0},
+                        {"edge": "default argument", "check": "BankAccount('Ann').balance", "expected": 0},
                         {"check": "BankAccount('Ann', 100).owner", "expected": "Ann"},
                         {"setup": "a = BankAccount('Ann', 100)\na.withdraw(30)", "check": "a.balance", "expected": 70},
-                        {"setup": "a = BankAccount('Ann', 100)\na.withdraw(100)", "check": "a.balance", "expected": 0},
+                        {"edge": "withdraw everything", "setup": "a = BankAccount('Ann', 100)\na.withdraw(100)", "check": "a.balance", "expected": 0},
                         {"setup": "a = BankAccount('Ann', 100)", "check": "a.deposit(-5)", "raises": "ValueError"},
                         {"setup": "a = BankAccount('Ann', 100)", "check": "a.withdraw(0)", "raises": "ValueError"},
-                        {
+                        {"edge": "failed call leaves state unchanged", 
                             "setup": "a = BankAccount('Ann', 100)\ntry:\n    a.withdraw(500)\nexcept ValueError:\n    pass",
                             "check": "a.balance",
                             "expected": 100,
@@ -192,9 +285,9 @@ TRACK = {
                         {"check": "str(Point(1, 2))", "expected": "(1, 2)"},
                         {"check": "Point(1, 2) == Point(1, 2)", "expected": True},
                         {"check": "Point(1, 2) == Point(2, 1)", "expected": False},
-                        {"check": "str(Point(-1, 0))", "expected": "(-1, 0)"},
+                        {"edge": "negative numbers", "check": "str(Point(-1, 0))", "expected": "(-1, 0)"},
                         {"check": "str(Point(1, 2).translate(3, -1))", "expected": "(4, 1)"},
-                        {
+                        {"edge": "original must not change", 
                             "setup": "p = Point(1, 2)\nq = p.translate(1, 1)",
                             "check": "[p.x, p.y, q.x, q.y]",
                             "expected": [1, 2, 2, 3],
@@ -209,6 +302,36 @@ TRACK = {
                     "questions": [
                         "Without __eq__, why is Point(1, 2) == Point(1, 2) False?",
                         "Why does translate not need to change self.x?",
+                    ],
+                },
+                {
+                    "id": "inventory",
+                    "title": "Inventory",
+                    "difficulty": "medium",
+                    "description": "Write a class Inventory that tracks how many of each item is in stock, using a dictionary stored in an attribute. add(item, qty) adds qty units of item. remove(item, qty) takes qty units away. quantity(item) returns how many are in stock, 0 for an item never added. total() returns the number of units across all items. add and remove raise ValueError if qty is not positive, and remove also raises ValueError if there are fewer than qty in stock - leaving the stock unchanged.",
+                    "starter": "class Inventory:\n    pass\n",
+                    "requires": ["Inventory"],
+                    "compare": "exact",
+                    "tests": [
+                        {"setup": "inv = Inventory()\ninv.add('apple', 5)\ninv.add('apple', 3)", "check": "inv.quantity('apple')", "expected": 8},
+                        {"setup": "inv = Inventory()\ninv.add('apple', 2)", "check": "inv.remove('apple', 5)", "raises": "ValueError"},
+                        {"edge": "unknown item", "check": "Inventory().quantity('pear')", "expected": 0},
+                        {"setup": "inv = Inventory()\ninv.add('a', 2)\ninv.add('b', 3)", "check": "inv.total()", "expected": 5},
+                        {"setup": "inv = Inventory()\ninv.add('a', 4)\ninv.remove('a', 1)", "check": "inv.quantity('a')", "expected": 3},
+                        {"setup": "inv = Inventory()", "check": "inv.add('a', 0)", "raises": "ValueError"},
+                        {"edge": "failed call leaves state unchanged", "setup": "inv = Inventory()\ninv.add('a', 2)\ntry:\n    inv.remove('a', 3)\nexcept ValueError:\n    pass", "check": "inv.quantity('a')", "expected": 2},
+                        {"setup": "inv = Inventory()", "check": "inv.remove('ghost', 1)", "raises": "ValueError"},
+                        {"edge": "brand-new object", "check": "Inventory().total()", "expected": 0},
+                    ],
+                    "hints": [
+                        "This is Bank Account with many balances instead of one - one per item. What maps a name to a number?",
+                        "Keep a dictionary from item name to quantity in self.stock, created empty in __init__. The counting pattern from the Dictionaries milestone handles adding.",
+                        "`self.stock.get(item, 0)` is the current quantity even for an unknown item - use it in quantity and in remove's check. Check every rule before changing anything. total adds up the values in the dictionary.",
+                        "Structure: __init__: self.stock = {}. add: if qty <= 0 raise; set stock[item] to get(item, 0) + qty. remove: if qty <= 0 or quantity(item) < qty raise; subtract qty. quantity: return get(item, 0). total: loop over the values, adding them up.",
+                    ],
+                    "questions": [
+                        "Why can remove call self.quantity instead of reading the dictionary directly?",
+                        "Should an item with quantity 0 stay in the dictionary? What changes if it doesn't?",
                     ],
                 },
             ],
@@ -245,6 +368,23 @@ TRACK = {
                     "code": "isinstance(Manager(\"Grace\", 4), Employee)     # True",
                 },
             ],
+            "quiz": [
+                {
+                    "question": "What does the last line return?",
+                    "code": "class A:\n    def hello(self):\n        return \"A\"\n\n    def greet(self):\n        return \"I am \" + self.hello()\n\nclass B(A):\n    def hello(self):\n        return \"B\"\n\nB().greet()",
+                    "answer": "`'I am B'`. greet comes from A, but self is a B object, so `self.hello()` runs B's version.",
+                },
+                {
+                    "question": "What happens on the last line?",
+                    "code": "class Base:\n    def __init__(self, name):\n        self.name = name\n\nclass Child(Base):\n    def __init__(self, name, age):\n        self.age = age\n\nChild(\"Kim\", 9).name",
+                    "answer": "An `AttributeError`. Child has its own `__init__`, so Base's never runs and name is never set. It needs `super().__init__(name)`.",
+                },
+                {
+                    "question": "What does `Cat().describe()` return?",
+                    "code": "class Cat:\n    def sound(self):\n        return \"Meow\"\n\n    def describe(self):\n        return f\"says {self.sound}\"",
+                    "answer": "Something like `'says <bound method Cat.sound of <...Cat object at 0x...>>'`. `self.sound` without brackets is the method itself; `self.sound()` calls it and gives `'Meow'`.",
+                },
+            ],
             "problems": [
                 {
                     "id": "animal-sounds",
@@ -258,7 +398,7 @@ TRACK = {
                         {"check": "Dog('Rex').speak()", "expected": "Woof"},
                         {"check": "Cat('Tom').describe()", "expected": "Tom says Meow"},
                         {"check": "Dog('Rex').describe()", "expected": "Rex says Woof"},
-                        {"check": "Animal('Generic').describe()", "expected": "Generic says Some sound"},
+                        {"edge": "the base class itself", "check": "Animal('Generic').describe()", "expected": "Generic says Some sound"},
                         {"check": "isinstance(Dog('Rex'), Animal)", "expected": True},
                         {"check": "Dog('Rex').name", "expected": "Rex"},
                         {"check": "[a.speak() for a in [Dog('a'), Cat('b'), Dog('c')]]", "expected": ["Woof", "Meow", "Woof"]},
@@ -275,6 +415,33 @@ TRACK = {
                     ],
                 },
                 {
+                    "id": "vehicles",
+                    "title": "Debug: Vehicles",
+                    "difficulty": "easy",
+                    "description": "summary() should give text like \"Car has 4 wheels\". A Bike has 2 wheels; a Truck has 6 and also remembers its load. There are two bugs: one in Vehicle and one in Truck. Use the errors in the results panel to find them.",
+                    "starter": "class Vehicle:\n    def __init__(self, name):\n        self.name = name\n\n    def wheels(self):\n        return 4\n\n    def summary(self):\n        return f\"{self.name} has {self.wheels} wheels\"\n\n\nclass Bike(Vehicle):\n    def wheels(self):\n        return 2\n\n\nclass Truck(Vehicle):\n    def __init__(self, name, load):\n        self.load = load\n\n    def wheels(self):\n        return 6\n",
+                    "requires": ["Vehicle", "Bike", "Truck"],
+                    "compare": "exact",
+                    "tests": [
+                        {"check": "Vehicle('Car').summary()", "expected": "Car has 4 wheels"},
+                        {"edge": "subclass with its own __init__", "check": "Truck('Big', 10).name", "expected": "Big"},
+                        {"check": "Bike('BMX').summary()", "expected": "BMX has 2 wheels"},
+                        {"check": "Truck('Big', 10).summary()", "expected": "Big has 6 wheels"},
+                        {"check": "Truck('Big', 10).load", "expected": 10},
+                        {"check": "Bike('BMX').wheels()", "expected": 2},
+                    ],
+                    "hints": [
+                        "Look at what summary returned in the first test - the text in the middle is not a number. And the second test says a Truck has no name.",
+                        "One bug is about using a method without calling it. The other is about a subclass that has its own __init__.",
+                        "`self.wheels` is the method; `self.wheels()` is its result. When a subclass defines __init__, the parent's __init__ only runs if you call it with super().",
+                        "Structure: in summary, call self.wheels() with brackets. In Truck.__init__, start with super().__init__(name), then store the load.",
+                    ],
+                    "questions": [
+                        "Why does Bike need no __init__ of its own, but Truck does?",
+                        "Which quiz question in the lesson showed the same two bugs?",
+                    ],
+                },
+                {
                     "id": "shapes",
                     "title": "Shapes",
                     "difficulty": "medium",
@@ -287,10 +454,10 @@ TRACK = {
                         {"check": "total_area([Square(2), Triangle(4, 5), Square(1)])", "expected": 15.0},
                         {"check": "Triangle(4, 5).area()", "expected": 10.0},
                         {"check": "[Square(2).name, Triangle(1, 1).name]", "expected": ["square", "triangle"]},
-                        {"check": "Shape('blob').area()", "expected": 0},
+                        {"edge": "the base class itself", "check": "Shape('blob').area()", "expected": 0},
                         {"check": "Square(3).describe()", "expected": "square with area 9"},
                         {"check": "isinstance(Triangle(1, 1), Shape)", "expected": True},
-                        {"check": "total_area([])", "expected": 0},
+                        {"edge": "empty input", "check": "total_area([])", "expected": 0},
                     ],
                     "hints": [
                         "Shape holds what every shape shares: a name, and a describe that works for any shape. Each subclass knows its own measurements and its own area formula.",
@@ -335,6 +502,28 @@ TRACK = {
                     "text": "Define `__len__` and Python's `len(obj)` works on your objects. Decide what happens when someone removes from an empty structure: the convention is to raise IndexError, just as a list does.",
                     "code": "    def __len__(self):\n        return len(self.items)",
                 },
+                {
+                    "heading": "The pattern, in full",
+                    "text": "Here is the whole pattern in a small class that is not a stack or a queue. Read it until each line makes sense: the storage is created once in `__init__`, every method works through `self.pages`, and the method that cannot work on an empty list raises an error with a message.",
+                    "code": "class History:\n    def __init__(self):\n        self.pages = []                  # the storage\n\n    def visit(self, page):\n        self.pages.append(page)\n\n    def current(self):\n        if len(self.pages) == 0:\n            raise IndexError(\"no pages visited yet\")\n        return self.pages[-1]\n\n    def __len__(self):\n        return len(self.pages)",
+                },
+            ],
+            "quiz": [
+                {
+                    "question": "What is the value of the last line?",
+                    "code": "q = []\nq.append(\"a\")\nq.append(\"b\")\nq.append(\"c\")\nfirst = q.pop(0)\nlast = q.pop()\n[first, last, q]",
+                    "answer": "`['a', 'c', ['b']]`. pop(0) takes from the front (queue order), pop() takes from the end (stack order).",
+                },
+                {
+                    "question": "What is `s` at the end?",
+                    "code": "s = []\ns.append(1)\ns.append(2)\ns.pop()\ns.append(3)\ns.append(4)\ns.pop()",
+                    "answer": "`[1, 3]`. Push 1, push 2, pop 2, push 3, push 4, pop 4.",
+                },
+                {
+                    "question": "What happens here?",
+                    "code": "items = []\nitems.pop()",
+                    "answer": "`IndexError: pop from empty list`. That is why a Stack's pop on an empty stack raises IndexError for free if it uses a list.",
+                },
             ],
             "problems": [
                 {
@@ -367,13 +556,13 @@ TRACK = {
                     "tests": [
                         {"setup": "s = Stack()\ns.push(1)\ns.push(2)\ns.push(3)", "check": "[s.pop(), s.pop()]", "expected": [3, 2]},
                         {"setup": "s = Stack()", "check": "s.pop()", "raises": "IndexError"},
-                        {"check": "Stack().is_empty()", "expected": True},
+                        {"edge": "brand-new object", "check": "Stack().is_empty()", "expected": True},
                         {"setup": "s = Stack()\ns.push('a')", "check": "s.is_empty()", "expected": False},
                         {"setup": "s = Stack()\ns.push(1)\ns.push(2)", "check": "[s.peek(), len(s)]", "expected": [2, 2]},
                         {"setup": "s = Stack()\ns.push(1)\ns.push(2)\ns.pop()", "check": "len(s)", "expected": 1},
-                        {"check": "len(Stack())", "expected": 0},
+                        {"edge": "empty structure", "check": "len(Stack())", "expected": 0},
                         {"setup": "s = Stack()", "check": "s.peek()", "raises": "IndexError"},
-                        {"setup": "s = Stack()\ns.push(1)\ns.pop()", "check": "s.is_empty()", "expected": True},
+                        {"edge": "emptied again", "setup": "s = Stack()\ns.push(1)\ns.pop()", "check": "s.is_empty()", "expected": True},
                     ],
                     "hints": [
                         "The stack needs somewhere to keep its items in order. Which built-in type keeps things in order and lets you add and remove at one end?",
@@ -397,11 +586,11 @@ TRACK = {
                     "tests": [
                         {"setup": "q = Queue()\nq.enqueue(1)\nq.enqueue(2)\nq.enqueue(3)", "check": "[q.dequeue(), q.dequeue()]", "expected": [1, 2]},
                         {"setup": "q = Queue()", "check": "q.dequeue()", "raises": "IndexError"},
-                        {"check": "Queue().is_empty()", "expected": True},
+                        {"edge": "brand-new object", "check": "Queue().is_empty()", "expected": True},
                         {"setup": "q = Queue()\nq.enqueue('a')", "check": "[q.is_empty(), len(q)]", "expected": [False, 1]},
-                        {"setup": "q = Queue()\nq.enqueue(1)\nq.dequeue()\nq.enqueue(2)", "check": "q.dequeue()", "expected": 2},
-                        {"setup": "q = Queue()\nq.enqueue(1)\nq.dequeue()", "check": "q.is_empty()", "expected": True},
-                        {"check": "len(Queue())", "expected": 0},
+                        {"edge": "reused after emptying", "setup": "q = Queue()\nq.enqueue(1)\nq.dequeue()\nq.enqueue(2)", "check": "q.dequeue()", "expected": 2},
+                        {"edge": "emptied again", "setup": "q = Queue()\nq.enqueue(1)\nq.dequeue()", "check": "q.is_empty()", "expected": True},
+                        {"edge": "empty structure", "check": "len(Queue())", "expected": 0},
                     ],
                     "hints": [
                         "A queue is almost a stack. The only difference is which end the items leave from.",
@@ -412,6 +601,34 @@ TRACK = {
                     "questions": [
                         "After pop(0), every remaining item shifts one place. What does that cost for a long queue?",
                         "Where have you met queues in everyday software?",
+                    ],
+                },
+                {
+                    "id": "text-editor",
+                    "title": "Text Editor with Undo",
+                    "difficulty": "medium",
+                    "description": "Write a class TextEditor. Its attribute text is the current text and starts as an empty string. write(s) adds s to the end of the text. undo() reverts the most recent write() that has not been undone yet; with nothing left to undo it does nothing.",
+                    "starter": "class TextEditor:\n    pass\n",
+                    "requires": ["TextEditor"],
+                    "compare": "exact",
+                    "tests": [
+                        {"setup": "e = TextEditor()\ne.write('Hello')\ne.write(' world')\ne.undo()", "check": "e.text", "expected": "Hello"},
+                        {"setup": "e = TextEditor()\ne.write('a')\ne.write('b')\ne.write('c')\ne.undo()\ne.undo()", "check": "e.text", "expected": "a"},
+                        {"edge": "brand-new object", "check": "TextEditor().text", "expected": ""},
+                        {"edge": "nothing to undo", "setup": "e = TextEditor()\ne.undo()", "check": "e.text", "expected": ""},
+                        {"edge": "undo past the start", "setup": "e = TextEditor()\ne.write('x')\ne.undo()\ne.undo()", "check": "e.text", "expected": ""},
+                        {"edge": "write after undo", "setup": "e = TextEditor()\ne.write('ab')\ne.undo()\ne.write('cd')", "check": "e.text", "expected": "cd"},
+                        {"setup": "e = TextEditor()\ne.write('1')\ne.write('2')\ne.undo()\ne.write('3')", "check": "e.text", "expected": "13"},
+                    ],
+                    "hints": [
+                        "To undo, the editor must remember what the text looked like before each write. Several undos in a row go back further and further - the most recent change is undone first.",
+                        "'Most recent first' is last in, first out: a stack. Keep a list of earlier versions of the text alongside the text itself.",
+                        "In write, push the current text onto the history list before changing it. In undo, if the history is not empty, pop the last saved version and make it the text.",
+                        "Structure: __init__: self.text = \"\" and self.history = []. write: append self.text to history, then add s to self.text. undo: if history is not empty, set self.text to history.pop().",
+                    ],
+                    "questions": [
+                        "Why is a stack the right structure here and not a queue?",
+                        "How would you add redo()?",
                     ],
                 },
             ],

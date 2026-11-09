@@ -91,7 +91,50 @@ TRACK = {
                     "text": "1. Solve a small example by hand.\n\n2. Write the brute-force solution in your head and work out its complexity.\n\n3. Ask what work is being repeated, and what you could remember to avoid it.",
                 },
             ],
+            "quiz": [
+                {
+                    "question": "What is `count` at the end? And what would it be if both ranges were 200?",
+                    "code": "count = 0\nfor a in range(100):\n    for b in range(100):\n        count = count + 1",
+                    "answer": "`10000`, and `40000` for 200. Doubling the input made the work four times bigger - that is what O(n^2) means.",
+                },
+                {
+                    "question": "What is the time complexity of this function?",
+                    "code": "def has_repeat(nums):\n    for n in nums:\n        if nums.count(n) > 1:\n            return True\n    return False",
+                    "answer": "O(n^2). There is only one visible loop, but `nums.count(n)` scans the whole list every time - a hidden inner loop.",
+                },
+                {
+                    "question": "Checking `x in big_list` or `x in big_set` for a million items - which is faster, and why?",
+                    "answer": "`x in big_set`: a set finds an item in O(1) on average by jumping straight to where it would be stored. A list has to compare x with the items one by one, O(n).",
+                },
+            ],
             "problems": [
+                {
+                    "id": "has-pair-sum",
+                    "title": "Pair With Sum",
+                    "difficulty": "easy",
+                    "description": "Return True if two numbers at different positions in nums add up to target, and False otherwise. First think of the brute-force solution and its complexity - then aim for O(n).",
+                    "function": {"name": "has_pair_sum", "params": ["nums", "target"]},
+                    "compare": "exact",
+                    "tests": [
+                        {"args": [[1, 4, 6], 10], "expected": True},
+                        {"args": [[1, 2, 3], 7], "expected": False},
+                        {"args": [[], 0], "expected": False},
+                        {"args": [[5], 10], "expected": False},
+                        {"args": [[5, 5], 10], "expected": True},
+                        {"args": [[-1, 3, 8], 2], "expected": True},
+                        {"args": [[2, 7, 11, 15], 26], "expected": True},
+                    ],
+                    "hints": [
+                        "Brute force: try every pair with a loop inside a loop. That works, but it is O(n^2). What is the repeated work?",
+                        "For each number n, the question is really 'have I already seen target - n?'. A set answers 'have I seen it?' in O(1).",
+                        "Walk the list once. Check for the partner before adding the current number to the set - that is what stops a single 5 from pairing with itself when the target is 10.",
+                        "Structure: seen = set(); for each n in nums: if target - n is in seen, return True; add n to seen. After the loop return False.",
+                    ],
+                    "questions": [
+                        "What breaks if you add n to the set before checking?",
+                        "Two Sum asks for the positions instead. What would you store instead of a set?",
+                    ],
+                },
                 CLASSIC["two-sum"],
                 {
                     "id": "missing-number",
@@ -146,7 +189,45 @@ TRACK = {
                     "text": "Two things go wrong most often. First, the loop condition: it must stop before either index goes out of range. Second, the leftovers: when the loop ends because one sequence ran out, the other may still have items you need to deal with.",
                 },
             ],
+            "quiz": [
+                {
+                    "question": "What is `steps` at the end?",
+                    "code": "nums = [1, 3, 4, 6]\nleft, right = 0, len(nums) - 1\nsteps = []\nwhile left < right:\n    total = nums[left] + nums[right]\n    steps.append(total)\n    if total == 9:\n        break\n    elif total < 9:\n        left += 1\n    else:\n        right -= 1",
+                    "answer": "`[7, 9]`. 1 + 6 = 7 is too small, so left moves to 3; 3 + 6 = 9 is the target.",
+                },
+                {
+                    "question": "Merging [1, 5] and [2, 3, 4] with one pointer in each: after the main loop ends, which items have not been placed yet?",
+                    "answer": "`5`. The loop places 1, 2, 3, 4 and stops when the second list runs out; the leftover 5 must still be added after the loop.",
+                },
+            ],
             "problems": [
+                {
+                    "id": "pair-sum-sorted",
+                    "title": "Pair Sum in a Sorted List",
+                    "difficulty": "easy",
+                    "description": "nums is sorted in ascending order. Return True if two numbers at different positions add up to target. Use two pointers - no set or dictionary - for O(n) time and O(1) extra memory.",
+                    "function": {"name": "pair_sum_sorted", "params": ["nums", "target"]},
+                    "compare": "exact",
+                    "tests": [
+                        {"args": [[1, 2, 4, 7], 9], "expected": True},
+                        {"args": [[1, 2, 3], 10], "expected": False},
+                        {"args": [[], 1], "expected": False},
+                        {"args": [[3], 6], "expected": False},
+                        {"args": [[2, 2], 4], "expected": True},
+                        {"args": [[-3, 0, 4, 8], 5], "expected": True},
+                        {"args": [[1, 3, 5, 7], 12], "expected": True},
+                    ],
+                    "hints": [
+                        "Start with the smallest and the largest number. If their sum is too small, which of the two can never be part of an answer? And if it is too big?",
+                        "Put one pointer at each end. The sorted order tells you which pointer to move after every comparison.",
+                        "Sum too small: only a bigger left number can help, so move left forward. Sum too big: move right back. Stop when the pointers meet - then no pair exists.",
+                        "Structure: left = 0, right = len(nums) - 1; while left < right: compute the sum; if it equals target return True; if it is smaller, left += 1; else right -= 1. After the loop return False.",
+                    ],
+                    "questions": [
+                        "Why is it safe to throw away the smallest number when the sum is too small?",
+                        "Why does this need a sorted list, when Pair With Sum did not?",
+                    ],
+                },
                 CLASSIC["merge-sorted-lists"],
                 {
                     "id": "is-subsequence",
@@ -202,8 +283,46 @@ TRACK = {
                     "text": "Popping from an empty stack raises IndexError - check before you pop if the input might be unbalanced.\n\nForgetting the final check: when the input ends, leftover items on the stack usually mean something was never closed or used.",
                 },
             ],
+            "quiz": [
+                {
+                    "question": "Checking \"([)]\" with a stack of open brackets: what is on the stack when the first closing bracket arrives, and what is the answer?",
+                    "answer": "The stack is `['(', '[']`. The first closer is `)`, but the top of the stack is `[`, so they do not match and the answer is False.",
+                },
+                {
+                    "question": "What is `stack` at the end?",
+                    "code": "stack = []\nfor ch in \"abba\":\n    if stack and stack[-1] == ch:\n        stack.pop()\n    else:\n        stack.append(ch)",
+                    "answer": "`[]`. a is pushed, b is pushed, the second b cancels the first, and the last a then cancels the first a.",
+                },
+            ],
             "problems": [
                 CLASSIC["valid-parentheses"],
+                {
+                    "id": "remove-adjacent-duplicates",
+                    "title": "Remove Adjacent Duplicates",
+                    "difficulty": "easy",
+                    "description": "Repeatedly remove pairs of equal letters that sit next to each other until none are left, and return what remains. For example \"abbaca\": removing \"bb\" gives \"aaca\", then removing \"aa\" gives \"ca\".",
+                    "function": {"name": "remove_adjacent_duplicates", "params": ["s"]},
+                    "compare": "exact",
+                    "tests": [
+                        {"args": ["abbaca"], "expected": "ca"},
+                        {"args": ["azxxzy"], "expected": "ay"},
+                        {"args": [""], "expected": ""},
+                        {"args": ["aa"], "expected": ""},
+                        {"args": ["abc"], "expected": "abc"},
+                        {"args": ["aabbcc"], "expected": ""},
+                        {"args": ["abba"], "expected": ""},
+                    ],
+                    "hints": [
+                        "Removing one pair can bring two new letters next to each other, so a single left-to-right pass over the string looks like it is not enough. Unless you keep the right thing around.",
+                        "Keep the letters that have survived so far on a stack. A new letter only ever needs to be compared with the most recent survivor.",
+                        "If the stack is not empty and its top equals the current letter, pop - the pair cancels. Otherwise push the letter. At the end, join the stack into a string.",
+                        "Structure: stack = []; for each ch in s: if stack and stack[-1] == ch, pop; else append ch. Return \"\".join(stack).",
+                    ],
+                    "questions": [
+                        "Why does the stack automatically handle pairs that only appear after another pair is removed?",
+                        "What is the time complexity, and how does it compare with repeatedly searching the string for pairs?",
+                    ],
+                },
                 {
                     "id": "evaluate-rpn",
                     "title": "Reverse Polish Notation",
@@ -261,8 +380,46 @@ TRACK = {
                     "text": "The same halving idea answers questions like 'where is the first element that is at least x?'. Instead of stopping when you find the target, you keep narrowing until the range closes on the boundary.",
                 },
             ],
+            "quiz": [
+                {
+                    "question": "Binary search for 9 in this list. Which indexes does it look at, in order?",
+                    "code": "nums = [1, 3, 5, 7, 9, 11]",
+                    "answer": "Index 2, then 4. left = 0, right = 5, mid = 2 (5 is too small, so left = 3); mid = (3 + 5) // 2 = 4, and nums[4] is 9.",
+                },
+                {
+                    "question": "Guessing a number from 1 to 1000, with 'higher' or 'lower' after each guess: what is the most guesses binary search needs?",
+                    "answer": "`10`. Each guess halves the range: 1000, 500, 250, 125, 63, 32, 16, 8, 4, 2, 1. 2 to the power 10 is 1024, just above 1000.",
+                },
+            ],
             "problems": [
                 CLASSIC["binary-search"],
+                {
+                    "id": "sqrt-floor",
+                    "title": "Whole Square Root",
+                    "difficulty": "medium",
+                    "description": "Return the largest whole number r with r * r <= n, for a whole number n of 0 or more. Use binary search over the possible answers - do not use ** 0.5, math.sqrt or a loop that tries every number.",
+                    "function": {"name": "sqrt_floor", "params": ["n"]},
+                    "compare": "exact",
+                    "tests": [
+                        {"args": [16], "expected": 4},
+                        {"args": [17], "expected": 4},
+                        {"args": [0], "expected": 0},
+                        {"args": [1], "expected": 1},
+                        {"args": [8], "expected": 2},
+                        {"args": [1000000], "expected": 1000},
+                        {"edge": "large input (must be fast)", "args": [2147395599], "expected": 46339},
+                    ],
+                    "hints": [
+                        "There is no list here - but the possible answers 0, 1, 2, ..., n are sorted, and for each one you can ask 'is r * r too big?'. That is enough for binary search.",
+                        "Search the range 0..n. If mid * mid is at most n, mid could be the answer and anything smaller is worse, so remember it and search to the right. Otherwise search to the left.",
+                        "This is the 'boundary' kind of binary search from the lesson: keep a best-so-far answer and keep narrowing until the range is empty.",
+                        "Structure: left = 0, right = n, answer = 0; while left <= right: mid = (left + right) // 2; if mid * mid <= n: answer = mid, left = mid + 1; else right = mid - 1. Return answer.",
+                    ],
+                    "questions": [
+                        "How many steps does it take for n around two billion?",
+                        "Which other problems can be solved by binary searching over the answer?",
+                    ],
+                },
                 {
                     "id": "first-at-least",
                     "title": "First Element At Least X",
@@ -318,7 +475,50 @@ TRACK = {
                     "text": "The empty list: when `head` is `None` there is no node to call `.next` on, so most methods need to handle that case first.\n\nLosing the rest of the list: the moment you overwrite a node's `next`, the node it used to point to is unreachable unless you saved it in a variable beforehand. Draw the boxes and arrows on paper and change one arrow at a time.",
                 },
             ],
+            "quiz": [
+                {
+                    "question": "What is the value of the last line?",
+                    "code": "class Node:\n    def __init__(self, value):\n        self.value = value\n        self.next = None\n\na = Node(1)\nb = Node(2)\nc = Node(3)\na.next = b\nb.next = c\na.next.next.value",
+                    "answer": "`3`. a.next is b, b.next is c, and c.value is 3.",
+                },
+                {
+                    "question": "Continuing from the previous question, after `b.next = None`: which values does a walk starting at a visit?",
+                    "answer": "`1` and `2`. The arrow from b to c is gone, so c can no longer be reached from a.",
+                },
+                {
+                    "question": "With `current = head`, what is wrong with this walk?",
+                    "code": "while current.next is not None:\n    print(current.value)\n    current = current.next",
+                    "answer": "It never prints the last node (the loop stops when current is the last node, before printing it), and it crashes on an empty list because None has no `.next`. Use `while current is not None`.",
+                },
+            ],
             "problems": [
+                {
+                    "id": "linked-list-search",
+                    "title": "Search a Linked List",
+                    "difficulty": "easy",
+                    "description": "append and to_list are written for you. Add two methods that walk the nodes: contains(value) returns True if any node holds value, and last() returns the value of the last node, or None if the list is empty. Walk the nodes - do not call to_list.",
+                    "starter": "class Node:\n    def __init__(self, value):\n        self.value = value\n        self.next = None\n\n\nclass LinkedList:\n    def __init__(self):\n        self.head = None\n\n    # append and to_list are given - read them, then write contains and last\n    def append(self, value):\n        node = Node(value)\n        if self.head is None:\n            self.head = node\n            return\n        current = self.head\n        while current.next is not None:\n            current = current.next\n        current.next = node\n\n    def to_list(self):\n        values = []\n        current = self.head\n        while current is not None:\n            values.append(current.value)\n            current = current.next\n        return values\n\n    def contains(self, value):\n        pass\n\n    def last(self):\n        pass\n",
+                    "requires": ["Node", "LinkedList"],
+                    "compare": "exact",
+                    "tests": [
+                        {"setup": "ll = LinkedList()\nfor v in [4, 8, 15]:\n    ll.append(v)", "check": "[ll.contains(8), ll.contains(5)]", "expected": [True, False]},
+                        {"setup": "ll = LinkedList()\nfor v in [4, 8, 15]:\n    ll.append(v)", "check": "ll.last()", "expected": 15},
+                        {"edge": "empty list", "check": "LinkedList().contains(1)", "expected": False},
+                        {"edge": "empty list", "check": "LinkedList().last()", "expected": None},
+                        {"edge": "single node", "setup": "ll = LinkedList()\nll.append('x')", "check": "[ll.contains('x'), ll.last()]", "expected": [True, "x"]},
+                        {"setup": "ll = LinkedList()\nfor v in [1, 2, 3]:\n    ll.append(v)", "check": "ll.contains(3)", "expected": True},
+                    ],
+                    "hints": [
+                        "Both methods are the walk from the lesson: start at the head and follow next. to_list in the starter shows the walk working - copy its shape, not its result.",
+                        "contains is a search: return True the moment a node holds the value, and False once the walk ends. last needs to stop on the final node rather than walk past it.",
+                        "For last, the final node is the one whose next is None (append in the starter finds it the same way). Deal with the empty list first, because None has no next.",
+                        "Structure: contains: current = self.head; while current is not None: if current.value == value return True; current = current.next. Return False. last: if self.head is None return None; walk while current.next is not None; return current.value.",
+                    ],
+                    "questions": [
+                        "Why do the two walks use different loop conditions?",
+                        "What is the complexity of each method?",
+                    ],
+                },
                 {
                     "id": "linked-list-basics",
                     "title": "Linked List",
@@ -330,11 +530,11 @@ TRACK = {
                     "tests": [
                         {"setup": "ll = LinkedList()\nll.append(1)\nll.append(2)\nll.append(3)", "check": "ll.to_list()", "expected": [1, 2, 3]},
                         {"setup": "ll = LinkedList()\nll.prepend(1)\nll.prepend(2)", "check": "ll.to_list()", "expected": [2, 1]},
-                        {"check": "LinkedList().to_list()", "expected": []},
-                        {"check": "len(LinkedList())", "expected": 0},
+                        {"edge": "empty list", "check": "LinkedList().to_list()", "expected": []},
+                        {"edge": "empty list", "check": "len(LinkedList())", "expected": 0},
                         {"setup": "ll = LinkedList()\nll.append(2)\nll.prepend(1)\nll.append(3)", "check": "ll.to_list()", "expected": [1, 2, 3]},
                         {"setup": "ll = LinkedList()\nll.append('a')\nll.append('b')\nll.prepend('c')", "check": "len(ll)", "expected": 3},
-                        {"setup": "ll = LinkedList()\nll.append(5)\nll.prepend(4)", "check": "[ll.head.value, ll.head.next.value, ll.head.next.next]", "expected": [4, 5, None]},
+                        {"edge": "links between nodes", "setup": "ll = LinkedList()\nll.append(5)\nll.prepend(4)", "check": "[ll.head.value, ll.head.next.value, ll.head.next.next]", "expected": [4, 5, None]},
                     ],
                     "hints": [
                         "Three of the four methods are the same walk from the head, doing something different along the way. prepend is the odd one out: it needs no walk at all.",
@@ -358,10 +558,10 @@ TRACK = {
                     "tests": [
                         {"setup": "ll = LinkedList()\nfor v in [1, 2, 3]:\n    ll.append(v)\nll.reverse()", "check": "ll.to_list()", "expected": [3, 2, 1]},
                         {"setup": "ll = LinkedList()\nfor v in [1, 2]:\n    ll.append(v)\nll.reverse()", "check": "ll.to_list()", "expected": [2, 1]},
-                        {"setup": "ll = LinkedList()\nll.reverse()", "check": "ll.to_list()", "expected": []},
-                        {"setup": "ll = LinkedList()\nll.append(7)\nll.reverse()", "check": "ll.to_list()", "expected": [7]},
+                        {"edge": "empty list", "setup": "ll = LinkedList()\nll.reverse()", "check": "ll.to_list()", "expected": []},
+                        {"edge": "single node", "setup": "ll = LinkedList()\nll.append(7)\nll.reverse()", "check": "ll.to_list()", "expected": [7]},
                         {"setup": "ll = LinkedList()\nfor v in [1, 2, 3]:\n    ll.append(v)\nll.reverse()", "check": "ll.head.value", "expected": 3},
-                        {"setup": "ll = LinkedList()\nfor v in [1, 2, 3]:\n    ll.append(v)\nll.reverse()\nll.append(0)", "check": "ll.to_list()", "expected": [3, 2, 1, 0]},
+                        {"edge": "list still usable after reversing", "setup": "ll = LinkedList()\nfor v in [1, 2, 3]:\n    ll.append(v)\nll.reverse()\nll.append(0)", "check": "ll.to_list()", "expected": [3, 2, 1, 0]},
                         {"setup": "ll = LinkedList()\nfor v in [1, 2, 3, 4]:\n    ll.append(v)\nll.reverse()\nll.reverse()", "check": "ll.to_list()", "expected": [1, 2, 3, 4]},
                     ],
                     "hints": [
@@ -402,10 +602,55 @@ TRACK = {
                     "text": "If each answer depends only on the previous one or two, you do not need a whole table - a couple of variables is enough, as in the Fibonacci example above.",
                 },
             ],
+            "quiz": [
+                {
+                    "question": "With the naive recursive fib from the lesson, how many times is fib(2) computed while computing fib(5)?",
+                    "answer": "`3` times: once inside fib(4) directly, and once inside each of the two fib(3) calls. The repeated work grows very fast as n grows.",
+                },
+                {
+                    "question": "What are `a` and `b` after the loop?",
+                    "code": "a, b = 1, 2\nfor _ in range(3):\n    a, b = b, a + b",
+                    "answer": "`a` is `5` and `b` is `8`. The pairs go (1, 2) -> (2, 3) -> (3, 5) -> (5, 8). Each step keeps only the last two answers.",
+                },
+            ],
             "problems": [
+                {
+                    "id": "fibonacci",
+                    "title": "Fibonacci, Fast",
+                    "difficulty": "easy",
+                    "description": "Return the n-th Fibonacci number: fib(0) is 0, fib(1) is 1, and every later one is the sum of the two before it. The tests go up to n = 70, so the naive recursive version from the lesson is far too slow - build the answer bottom-up.",
+                    "function": {"name": "fib", "params": ["n"]},
+                    "compare": "exact",
+                    "tests": [
+                        {"args": [10], "expected": 55},
+                        {"args": [2], "expected": 1},
+                        {"args": [0], "expected": 0},
+                        {"args": [1], "expected": 1},
+                        {"args": [30], "expected": 832040},
+                        {"edge": "large input (must be fast)", "args": [70], "expected": 190392490709135},
+                    ],
+                    "hints": [
+                        "Try the naive recursion and watch the n = 70 test time out. Why is it so slow? Count how often the same small values are recomputed.",
+                        "Go the other way: start from fib(0) and fib(1) and build upwards, so each value is computed exactly once.",
+                        "Each step only needs the previous two values, so two variables are enough - no list needed. Handle n = 0 so the loop is never needed for it.",
+                        "Structure: if n < 2 return n; previous, current = 0, 1; repeat n - 1 times: previous, current = current, previous + current; return current.",
+                    ],
+                    "questions": [
+                        "What is the time complexity of your version, and of the naive one?",
+                        "How is Climbing Stairs the same problem in disguise?",
+                    ],
+                },
                 CLASSIC["climbing-stairs"],
                 CLASSIC["max-subarray"],
             ],
         },
     ],
 }
+
+# Binary search trees come between linked lists and dynamic programming
+from curriculum_bst import PYTHON_MILESTONE  # noqa: E402
+
+TRACK["milestones"].insert(
+    next(i for i, m in enumerate(TRACK["milestones"]) if m["id"] == "dsa-dynamic-programming"),
+    PYTHON_MILESTONE,
+)

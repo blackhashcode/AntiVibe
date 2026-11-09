@@ -25,19 +25,31 @@ export function isMilestoneComplete(milestone: MilestoneSummary, isSolved: IsSol
 
 /**
  * The milestone that has to be finished before `milestoneId` opens up, or
- * undefined if it is already unlocked. Milestones unlock strictly in order,
- * across tracks: the first OOP milestone needs the last Python one.
+ * undefined if it is already unlocked. Milestones unlock in order, across
+ * tracks: the first OOP milestone needs the last Python one.
+ *
+ * Everything up to the furthest milestone with a solved exercise stays open,
+ * so exercises added to earlier milestones later never re-lock a learner's
+ * place - they just show up as unsolved.
  */
 export function blockingMilestone(tracks: Track[], milestoneId: string, isSolved: IsSolved): MilestoneSummary | undefined {
-    for (const milestone of allMilestones(tracks)) {
-        if (milestone.id === milestoneId) {
-            return undefined;
-        }
-        if (!isMilestoneComplete(milestone, isSolved)) {
-            return milestone;
+    const milestones = allMilestones(tracks);
+    const target = milestones.findIndex(milestone => milestone.id === milestoneId);
+    const reached = furthestReached(milestones, isSolved);
+    if (target <= reached) {
+        return undefined;
+    }
+    return milestones.slice(Math.max(reached, 0), target).find(milestone => !isMilestoneComplete(milestone, isSolved));
+}
+
+/** Index of the last milestone with at least one solved exercise, or -1. */
+function furthestReached(milestones: MilestoneSummary[], isSolved: IsSolved): number {
+    for (let index = milestones.length - 1; index >= 0; index--) {
+        if (milestones[index].problems.some(problem => isSolved(problem.id))) {
+            return index;
         }
     }
-    return undefined;
+    return -1;
 }
 
 /** The first milestone that still has unsolved problems, i.e. where the learner currently is. */

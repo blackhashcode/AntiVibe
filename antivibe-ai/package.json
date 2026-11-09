@@ -1,8 +1,8 @@
 {
     "name": "antivibe-ai",
     "displayName": "Antivibe.ai",
-    "description": "Milestone-based coding tutor: learn Python, OOP and DSA by writing the code yourself, with lessons, instant tests and progressive hints",
-    "version": "0.2.0",
+    "description": "Milestone-based coding tutor: learn Python, C++ and Java - fundamentals, OOP and DSA - by writing the code yourself, with lessons, instant tests and progressive hints",
+    "version": "0.4.0",
     "engines": {
         "vscode": "^1.85.0"
     },
@@ -46,8 +46,20 @@
             },
             {
                 "command": "antivibe.resetProgress",
-                "title": "Antivibe: Reset Progress",
+                "title": "Antivibe: Reset Progress (Start Again)",
+                "category": "Antivibe",
+                "icon": "$(discard)"
+            },
+            {
+                "command": "antivibe.openHistory",
+                "title": "Antivibe: Open My History",
                 "category": "Antivibe"
+            },
+            {
+                "command": "antivibe.chooseLanguage",
+                "title": "Antivibe: Choose Language",
+                "category": "Antivibe",
+                "icon": "$(globe)"
             }
         ],
         "viewsContainers": {
@@ -85,7 +97,7 @@
                 "command": "antivibe.checkSolution",
                 "key": "ctrl+alt+t",
                 "mac": "cmd+alt+t",
-                "when": "editorTextFocus && editorLangId == python"
+                "when": "editorTextFocus && editorLangId =~ /^(python|cpp|c|java)$/"
             }
         ],
         "menus": {
@@ -97,10 +109,15 @@
                 {
                     "command": "antivibe.checkSolution",
                     "group": "navigation",
-                    "when": "editorLangId == python"
+                    "when": "editorLangId =~ /^(python|cpp|c|java)$/"
                 }
             ],
             "view/title": [
+                {
+                    "command": "antivibe.chooseLanguage",
+                    "when": "view == antivibe.curriculum",
+                    "group": "navigation@0"
+                },
                 {
                     "command": "antivibe.continue",
                     "when": "view == antivibe.curriculum",
@@ -110,6 +127,11 @@
                     "command": "antivibe.refresh",
                     "when": "view == antivibe.curriculum",
                     "group": "navigation@2"
+                },
+                {
+                    "command": "antivibe.resetProgress",
+                    "when": "view == antivibe.curriculum",
+                    "group": "navigation@3"
                 }
             ]
         },
@@ -130,6 +152,26 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Keep each milestone locked until every exercise in the one before it is solved. Turn off to open any exercise."
+                },
+                "antivibe.language": {
+                    "type": "string",
+                    "enum": [
+                        "python",
+                        "cpp",
+                        "java"
+                    ],
+                    "enumDescriptions": [
+                        "Python",
+                        "C++ (needs g++)",
+                        "Java (needs a JDK)"
+                    ],
+                    "default": "python",
+                    "description": "The language the Learning Path shows. Progress is kept separately for each language."
+                },
+                "antivibe.cppCompiler": {
+                    "type": "string",
+                    "default": "g++",
+                    "description": "C++ compiler used to build your C++ solutions (g++ or clang++)."
                 }
             }
         }

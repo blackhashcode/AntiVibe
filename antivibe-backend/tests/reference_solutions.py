@@ -551,4 +551,573 @@ class LinkedList:
             current = following
         self.head = previous
 ''',
+    "average-of-two": '''
+def average_of_two(a, b):
+    total = a + b
+    return total / 2
+''',
+    "sum-of-evens": '''
+def sum_of_evens(n):
+    total = 0
+    for i in range(1, n + 1):
+        if i % 2 == 0:
+            total += i
+    return total
+''',
+    "count-char": '''
+def count_char(s, ch):
+    count = 0
+    for letter in s:
+        if letter == ch:
+            count += 1
+    return count
+''',
+    "has-digit": '''
+def has_digit(s):
+    for ch in s:
+        if ch.isdigit():
+            return True
+    return False
+''',
+    "sum-of-digits": '''
+def sum_of_digits(n):
+    total = 0
+    rest = n
+    while rest > 0:
+        total += rest % 10
+        rest = rest // 10
+    return total
+''',
+    "index-of": '''
+def index_of(nums, target):
+    for i in range(len(nums)):
+        if nums[i] == target:
+            return i
+    return -1
+''',
+    "without-negatives": '''
+def without_negatives(nums):
+    result = []
+    for n in nums:
+        if n >= 0:
+            result.append(n)
+    return result
+''',
+    "capitalize-words": '''
+def capitalize_words(s):
+    words = []
+    for word in s.split():
+        words.append(word[0].upper() + word[1:])
+    return " ".join(words)
+''',
+    "is-palindrome-word": '''
+def is_palindrome_word(word):
+    lowered = word.lower()
+    return lowered == lowered[::-1]
+''',
+    "longest-word": '''
+def longest_word(s):
+    best = ""
+    for word in s.split():
+        if len(word) > len(best):
+            best = word
+    return best
+''',
+    "remove-spaces": '''
+def remove_spaces(s):
+    return s.replace(" ", "")
+''',
+    "unique-count": '''
+def unique_count(nums):
+    return len(set(nums))
+''',
+    "most-common-char": '''
+def most_common_char(s):
+    counts = {}
+    for ch in s:
+        counts[ch] = counts.get(ch, 0) + 1
+    best = ""
+    for ch in s:
+        if best == "" or counts[ch] > counts[best]:
+            best = ch
+    return best
+''',
+    "group-by-first-letter": '''
+def group_by_first_letter(words):
+    groups = {}
+    for word in words:
+        letter = word[0]
+        if letter not in groups:
+            groups[letter] = []
+        groups[letter].append(word)
+    return groups
+''',
+    "parse-scores": '''
+def parse_scores(text):
+    scores = []
+    for piece in text.split(","):
+        try:
+            scores.append(int(piece))
+        except ValueError:
+            pass
+    return scores
+''',
+    "primes": '''
+def is_prime(n):
+    if n < 2:
+        return False
+    for d in range(2, n):
+        if n % d == 0:
+            return False
+    return True
+
+
+def primes_up_to(n):
+    result = []
+    for k in range(2, n + 1):
+        if is_prime(k):
+            result.append(k)
+    return result
+''',
+    "power": '''
+def power(base, exp):
+    if exp == 0:
+        return 1
+    return base * power(base, exp - 1)
+''',
+    "count-down": '''
+def count_down(n):
+    if n == 0:
+        return [0]
+    return [n] + count_down(n - 1)
+''',
+    "sum-list": '''
+def sum_list(nums):
+    if len(nums) == 0:
+        return 0
+    return nums[0] + sum_list(nums[1:])
+''',
+    "reverse-recursive": '''
+def reverse_recursive(s):
+    if s == "":
+        return ""
+    return reverse_recursive(s[1:]) + s[0]
+''',
+    "light-switch": '''
+class LightSwitch:
+    def __init__(self):
+        self.on = False
+
+    def toggle(self):
+        self.on = not self.on
+
+    def is_on(self):
+        return self.on
+''',
+    "playlist": '''
+class Playlist:
+    def __init__(self):
+        self.songs = []
+
+    def add(self, song):
+        self.songs.append(song)
+
+    def count(self):
+        return len(self.songs)
+
+    def has(self, song):
+        return song in self.songs
+
+    def remove(self, song):
+        self.songs.remove(song)
+''',
+    "inventory": '''
+class Inventory:
+    def __init__(self):
+        self.stock = {}
+
+    def add(self, item, qty):
+        if qty <= 0:
+            raise ValueError("quantity must be positive")
+        self.stock[item] = self.stock.get(item, 0) + qty
+
+    def remove(self, item, qty):
+        if qty <= 0 or self.quantity(item) < qty:
+            raise ValueError("cannot remove that many")
+        self.stock[item] -= qty
+
+    def quantity(self, item):
+        return self.stock.get(item, 0)
+
+    def total(self):
+        units = 0
+        for qty in self.stock.values():
+            units += qty
+        return units
+''',
+    "vehicles": '''
+class Vehicle:
+    def __init__(self, name):
+        self.name = name
+
+    def wheels(self):
+        return 4
+
+    def summary(self):
+        return f"{self.name} has {self.wheels()} wheels"
+
+
+class Bike(Vehicle):
+    def wheels(self):
+        return 2
+
+
+class Truck(Vehicle):
+    def __init__(self, name, load):
+        super().__init__(name)
+        self.load = load
+
+    def wheels(self):
+        return 6
+''',
+    "text-editor": '''
+class TextEditor:
+    def __init__(self):
+        self.text = ""
+        self.history = []
+
+    def write(self, s):
+        self.history.append(self.text)
+        self.text = self.text + s
+
+    def undo(self):
+        if self.history:
+            self.text = self.history.pop()
+''',
+    "has-pair-sum": '''
+def has_pair_sum(nums, target):
+    seen = set()
+    for n in nums:
+        if target - n in seen:
+            return True
+        seen.add(n)
+    return False
+''',
+    "pair-sum-sorted": '''
+def pair_sum_sorted(nums, target):
+    left, right = 0, len(nums) - 1
+    while left < right:
+        total = nums[left] + nums[right]
+        if total == target:
+            return True
+        if total < target:
+            left += 1
+        else:
+            right -= 1
+    return False
+''',
+    "remove-adjacent-duplicates": '''
+def remove_adjacent_duplicates(s):
+    stack = []
+    for ch in s:
+        if stack and stack[-1] == ch:
+            stack.pop()
+        else:
+            stack.append(ch)
+    return "".join(stack)
+''',
+    "sqrt-floor": '''
+def sqrt_floor(n):
+    left, right = 0, n
+    answer = 0
+    while left <= right:
+        mid = (left + right) // 2
+        if mid * mid <= n:
+            answer = mid
+            left = mid + 1
+        else:
+            right = mid - 1
+    return answer
+''',
+    "linked-list-search": '''
+class Node:
+    def __init__(self, value):
+        self.value = value
+        self.next = None
+
+
+class LinkedList:
+    def __init__(self):
+        self.head = None
+
+    def append(self, value):
+        node = Node(value)
+        if self.head is None:
+            self.head = node
+            return
+        current = self.head
+        while current.next is not None:
+            current = current.next
+        current.next = node
+
+    def to_list(self):
+        values = []
+        current = self.head
+        while current is not None:
+            values.append(current.value)
+            current = current.next
+        return values
+
+    def contains(self, value):
+        current = self.head
+        while current is not None:
+            if current.value == value:
+                return True
+            current = current.next
+        return False
+
+    def last(self):
+        if self.head is None:
+            return None
+        current = self.head
+        while current.next is not None:
+            current = current.next
+        return current.value
+''',
+    "fibonacci": '''
+def fib(n):
+    if n < 2:
+        return n
+    previous, current = 0, 1
+    for _ in range(n - 1):
+        previous, current = current, previous + current
+    return current
+''',
+    'bst-insert': '''
+class TreeNode:
+    def __init__(self, value, left=None, right=None):
+        self.value = value
+        self.left = left
+        self.right = right
+
+
+class BST:
+    def __init__(self):
+        self.root = None
+
+    def insert(self, value):
+        if self.root is None:
+            self.root = TreeNode(value)
+            return
+        node = self.root
+        while True:
+            if value == node.value:
+                return
+            if value < node.value:
+                if node.left is None:
+                    node.left = TreeNode(value)
+                    return
+                node = node.left
+            else:
+                if node.right is None:
+                    node.right = TreeNode(value)
+                    return
+                node = node.right
+
+    def contains(self, value):
+        node = self.root
+        while node is not None:
+            if value == node.value:
+                return True
+            node = node.left if value < node.value else node.right
+        return False
+''',
+    'bst-inorder': '''
+class TreeNode:
+    def __init__(self, value, left=None, right=None):
+        self.value = value
+        self.left = left
+        self.right = right
+
+
+def _walk(node):
+    if node is None:
+        return []
+    return _walk(node.left) + [node.value] + _walk(node.right)
+
+
+def _count(node):
+    if node is None:
+        return 0
+    return _count(node.left) + 1 + _count(node.right)
+
+
+class BST:
+    def __init__(self):
+        self.root = None
+
+    def insert(self, value):
+        if self.root is None:
+            self.root = TreeNode(value)
+            return
+        node = self.root
+        while True:
+            if value == node.value:
+                return
+            if value < node.value:
+                if node.left is None:
+                    node.left = TreeNode(value)
+                    return
+                node = node.left
+            else:
+                if node.right is None:
+                    node.right = TreeNode(value)
+                    return
+                node = node.right
+
+    def in_order(self):
+        return _walk(self.root)
+
+    def size(self):
+        return _count(self.root)
+''',
+    'bst-height': '''
+class TreeNode:
+    def __init__(self, value, left=None, right=None):
+        self.value = value
+        self.left = left
+        self.right = right
+
+
+def _height(node):
+    if node is None:
+        return 0
+    return 1 + max(_height(node.left), _height(node.right))
+
+
+class BST:
+    def __init__(self):
+        self.root = None
+
+    def insert(self, value):
+        if self.root is None:
+            self.root = TreeNode(value)
+            return
+        node = self.root
+        while True:
+            if value == node.value:
+                return
+            if value < node.value:
+                if node.left is None:
+                    node.left = TreeNode(value)
+                    return
+                node = node.left
+            else:
+                if node.right is None:
+                    node.right = TreeNode(value)
+                    return
+                node = node.right
+
+    def height(self):
+        return _height(self.root)
+
+    def min_value(self):
+        if self.root is None:
+            raise ValueError("empty tree")
+        node = self.root
+        while node.left is not None:
+            node = node.left
+        return node.value
+
+    def max_value(self):
+        if self.root is None:
+            raise ValueError("empty tree")
+        node = self.root
+        while node.right is not None:
+            node = node.right
+        return node.value
+''',
+    'valid-bst': '''
+class TreeNode:
+    def __init__(self, value, left=None, right=None):
+        self.value = value
+        self.left = left
+        self.right = right
+
+
+def is_valid_bst(node, low=None, high=None):
+    if node is None:
+        return True
+    if low is not None and node.value <= low:
+        return False
+    if high is not None and node.value >= high:
+        return False
+    return is_valid_bst(node.left, low, node.value) and is_valid_bst(node.right, node.value, high)
+''',
+    'bst-remove': '''
+class TreeNode:
+    def __init__(self, value, left=None, right=None):
+        self.value = value
+        self.left = left
+        self.right = right
+
+
+def _remove_from(node, value):
+    if node is None:
+        return None
+    if value < node.value:
+        node.left = _remove_from(node.left, value)
+    elif value > node.value:
+        node.right = _remove_from(node.right, value)
+    else:
+        if node.left is None:
+            return node.right
+        if node.right is None:
+            return node.left
+        successor = node.right
+        while successor.left is not None:
+            successor = successor.left
+        node.value = successor.value
+        node.right = _remove_from(node.right, successor.value)
+    return node
+
+
+class BST:
+    def __init__(self):
+        self.root = None
+
+    def insert(self, value):
+        if self.root is None:
+            self.root = TreeNode(value)
+            return
+        node = self.root
+        while True:
+            if value == node.value:
+                return
+            if value < node.value:
+                if node.left is None:
+                    node.left = TreeNode(value)
+                    return
+                node = node.left
+            else:
+                if node.right is None:
+                    node.right = TreeNode(value)
+                    return
+                node = node.right
+
+    def in_order(self):
+        result = []
+
+        def visit(node):
+            if node is not None:
+                visit(node.left)
+                result.append(node.value)
+                visit(node.right)
+
+        visit(self.root)
+        return result
+
+    def remove(self, value):
+        self.root = _remove_from(self.root, value)
+''',
 }

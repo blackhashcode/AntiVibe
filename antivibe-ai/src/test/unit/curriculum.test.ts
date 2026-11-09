@@ -53,6 +53,24 @@ test('solving out of order does not skip the unsolved problem', () => {
     assert.strictEqual(solvedCount(TRACKS[0].milestones[0].problems, solved('b')), 1);
 });
 
+test('exercises added to earlier milestones do not re-lock a learner who moved on', () => {
+    // 'b' and 'c' are "new": the learner solved 'a' and then 'd' in the OOP track
+    const isSolved = solved('a', 'd');
+    assert.strictEqual(blockingMilestone(TRACKS, 'loops', isSolved), undefined);
+    assert.strictEqual(blockingMilestone(TRACKS, 'classes', isSolved), undefined);
+    // ...but Continue Learning sends them back to the first unsolved exercise
+    assert.strictEqual(nextProblem(TRACKS, isSolved)?.id, 'b');
+});
+
+test('beyond the furthest milestone reached, the usual rule applies', () => {
+    const tracks: Track[] = [
+        ...TRACKS,
+        { id: 'dsa', title: 'DSA', description: '', milestones: [milestone('dsa', 'hashing', ['f'])] }
+    ];
+    assert.strictEqual(blockingMilestone(tracks, 'hashing', solved('a', 'd'))?.id, 'classes');
+    assert.strictEqual(blockingMilestone(tracks, 'hashing', solved('a', 'd', 'e')), undefined);
+});
+
 test('when everything is solved there is nothing next', () => {
     const isSolved = solved('a', 'b', 'c', 'd', 'e');
     assert.strictEqual(currentMilestone(TRACKS, isSolved), undefined);

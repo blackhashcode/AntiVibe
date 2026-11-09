@@ -5,8 +5,9 @@ import enum
 import random
 import re
 
+from languages import LANGUAGES
 from problems import (
-    HINT_LABELS, MILESTONES, PROBLEMS, TRACKS, format_example, required_names, starter_code
+    CURRICULA, HINT_LABELS, format_example, required_names, starter_code, with_edge_labels,
 )
 
 app = FastAPI(title="Antivibe.ai API", version="0.3.0")
@@ -15,8 +16,15 @@ app = FastAPI(title="Antivibe.ai API", version="0.3.0")
 # extension host (not a browser page), so it doesn't need CORS, and leaving it
 # out stops arbitrary websites from reading this local server.
 
-PROBLEMS_BY_ID = {problem["id"]: problem for problem in PROBLEMS}
-MILESTONES_BY_ID = {milestone["id"]: milestone for milestone in MILESTONES}
+LanguageParam = Query("python", description="python, cpp or java")
+
+
+def curriculum_for(language: str) -> dict:
+    if language not in LANGUAGES:
+        raise HTTPException(status_code=422, detail=f"Unknown language: {language}")
+    if language not in CURRICULA:
+        raise HTTPException(status_code=404, detail=f"No {LANGUAGES[language]['name']} curriculum yet")
+    return CURRICULA[language]
 
 
 # Data models
@@ -54,9 +62,16 @@ class FunctionSpec(BaseModel):
     name: str
     params: List[str]
 
+class Signature(BaseModel):
+    name: str
+    params: List[List[Any]]
+    returns: str
+
 class ProblemDetail(ProblemSummary):
+    language: str
     description: str
     function: Optional[FunctionSpec] = None
+    signature: Optional[Signature] = None
     starter: str
     requires: List[str]
     compare: str
@@ -91,8 +106,14 @@ class MilestoneSummary(BaseModel):
     track: str
     problems: List[ProblemSummary]
 
+class QuizItem(BaseModel):
+    question: str
+    code: Optional[str] = None
+    answer: str
+
 class MilestoneDetail(MilestoneSummary):
     lesson: List[LessonSection]
+    quiz: List[QuizItem] = []
 
 class TrackSummary(BaseModel):
     id: str
@@ -108,14 +129,19 @@ class Curriculum(BaseModel):
 # Curriculum
 # ---------------------------------------------------------------------------
 
+@app.get("/api/languages")
+async def get_languages():
+    """The languages there is a curriculum for."""
+    return {"languages": [{"id": lang, "name": LANGUAGES[lang]["name"]} for lang in CURRICULA]}
+
 @app.get("/api/curriculum", response_model=Curriculum)
-async def get_curriculum():
+async def get_curriculum(language: str = LanguageParam):
     """Tracks, milestones and problem titles, in learning order (no lessons, tests or hints)."""
-    return {"tracks": TRACKS}
+    return {"tracks": curriculum_for(language)["tracks"]}
 
 @app.get("/api/milestones/{milestone_id}", response_model=MilestoneDetail)
-async def get_milestone(milestone_id: str):
-    milestone = MILESTONES_BY_ID.get(milestone_id)
+async def get_milestone(milestone_id: str, language: str = LanguageParam):
+    milestone = curriculum_for(language)["milestones_by_id"].get(milestone_id)
     if milestone is None:
         raise HTTPException(status_code=404, detail=f"Unknown milestone: {milestone_id}")
     return milestone
@@ -133,31 +159,33 @@ PROBLEM_NEXT_STEPS = {
     4: "That was the last hint - there is no full solution here. Translate the structure into code line by line.",
 }
 
-def get_problem_or_404(problem_id: str) -> dict:
-    problem = PROBLEMS_BY_ID.get(problem_id)
+def get_problem_or_404(problem_id: str, language: str) -> dict:
+    problem = curriculum_for(language)["problems_by_id"].get(problem_id)
     if problem is None:
         raise HTTPException(status_code=404, detail=f"Unknown problem: {problem_id}")
     return problem
 
 @app.get("/api/problems", response_model=ProblemList)
-async def list_problems():
-    return {"problems": PROBLEMS}
+async def list_problems(language: str = LanguageParam):
+    return {"problems": curriculum_for(language)["problems"]}
 
 @app.get("/api/problems/{problem_id}", response_model=ProblemDetail)
-async def get_problem(problem_id: str):
-    problem = get_problem_or_404(problem_id)
+async def get_problem(problem_id: str, language: str = LanguageParam):
+    problem = get_problem_or_404(problem_id, language)
     return {
         **problem,
-        "starter": starter_code(problem),
+        "language": language,
+        "tests": with_edge_labels(problem["tests"]),
+        "starter": starter_code(problem, language),
         "requires": required_names(problem),
-        "examples": [format_example(problem, test) for test in problem["tests"][:2]],
+        "examples": [format_example(problem, test, language) for test in problem["tests"][:2]],
         "hint_count": len(problem["hints"]),
     }
 
 @app.get("/api/problems/{problem_id}/hints", response_model=ProblemHints)
-async def get_problem_hints(problem_id: str, upto: int = Query(1, ge=1)):
+async def get_problem_hints(problem_id: str, upto: int = Query(1, ge=1), language: str = LanguageParam):
     """Return hints 1..upto for a problem. Hints are revealed in order."""
-    problem = get_problem_or_404(problem_id)
+    problem = get_problem_or_404(problem_id, language)
     total = len(problem["hints"])
     upto = min(upto, total)
 

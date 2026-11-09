@@ -7,15 +7,18 @@
 
 ## Features
 
-- 🗺️ **A Learning Path**: three tracks - Python Fundamentals, Object-Oriented Programming, Data Structures & Algorithms - split into 17 milestones
-- 📖 **Lessons**: each milestone starts with a short lesson: the concept, examples, and the mistakes beginners make
-- 🏋️ **45 Exercises**: each opens as a starter file with an empty function or class for you to fill in
+- 🗺️ **A Learning Path**: three tracks - Python Fundamentals, Object-Oriented Programming, Data Structures & Algorithms - split into 19 milestones
+- 📖 **Lessons**: each milestone starts with a short lesson - the concept, examples, and the mistakes beginners make - and ends with "Check yourself" questions: predict what a piece of code does, then reveal the answer
+- 🏋️ **81 Exercises**: each opens as a starter file with a Plan section and an empty function or class to fill in. "Debug" exercises start from buggy code for you to fix
 - 🔒 **Milestones Unlock in Order**: solve every exercise in a milestone to open the next one
 - 🧪 **Check My Solution**: runs your code against test cases and shows the code that ran, the expected value and what you returned
+- 🧑‍🏫 **Code Review**: after each check, notes on how the code is written - looping over positions instead of items, `if ...: return True else: return False`, changing a list you were given, and more
+- 🧱 **Edge Cases Called Out**: tests that cover an edge case - empty input, zero, negative numbers, a single item, invalid input, a brand-new object - are labelled in the results, so you learn to think of them yourself
+- 📈 **Learning History**: every exercise opened, lesson read, hint revealed and check run is appended to `antivibe-practice/history.jsonl`, with your code and the results, for analysing your progress later
 - 💡 **Progressive Hints**: four hints per exercise, unlocked one at a time - from a conceptual nudge to the code structure, never the full solution
 - 🔍 **Free-form Hints**: select any code, describe the problem, and get a hint even outside the learning path
 
-Solutions are written in **Python**.
+Solutions can be written in **Python** or **C++** (Java is planned). Each language has its own learning path - fundamentals, OOP and DSA - with lessons written for that language, and progress is kept separately for each. Pick one with the 🌐 button at the top of the Learning Path.
 
 ## Quick Start
 
@@ -23,7 +26,8 @@ Solutions are written in **Python**.
 
 - VS Code 1.85 or newer
 - Node.js (to build the VS Code extension)
-- Python 3.8+ (for the backend server and for running your solutions)
+- Python 3.9+ (for the backend server and for running your solutions)
+- For C++: g++ (or clang++) on the PATH - on Windows, for example from MSYS2
 
 ### Installation & Setup
 
@@ -62,7 +66,7 @@ uvicorn main:app --reload --port 8000
 
 1. Click the **Antivibe flag** in the activity bar (far left) to open the **Learning Path**. It shows every track and milestone, what you have solved, and what is still locked.
 2. Press the **▶ Continue Learning** button at the top of the Learning Path (or run `Antivibe: Continue Learning` from the Command Palette, `Ctrl+Shift+P`). It opens your next unsolved exercise - and the lesson, when you start a new milestone.
-3. **Read the lesson**, then **write your solution** in the exercise file. Keep the function and class names from the starter code. Exercise files live in `antivibe-practice/` and are never overwritten.
+3. **Read the lesson** and answer its "Check yourself" questions, then **write a plan and your solution** in the exercise file. Keep the function and class names from the starter code. Exercise files live in `antivibe-practice/` and are never overwritten.
 4. **Antivibe: Check My Solution** (`Ctrl+Alt+T`) - runs the tests and opens a results panel. Syntax errors, exceptions (with line numbers), infinite loops and a forgotten `return` are all reported.
 5. **Antivibe: Get Hint** (`Ctrl+Shift+H`) - reveals the next hint for the exercise:
    - 🚀 Hint 1: Conceptual nudge
@@ -71,7 +75,9 @@ uvicorn main:app --reload --port 8000
    - 🎯 Hint 4: Code structure
 6. When every exercise in a milestone passes, the next milestone unlocks.
 
-Other commands: **Antivibe: Pick an Exercise** (any exercise in an unlocked milestone), **Antivibe: Open Lesson**, **Antivibe: Refresh Learning Path** and **Antivibe: Reset Progress**.
+Other commands: **Antivibe: Pick an Exercise** (any exercise in an unlocked milestone), **Antivibe: Open Lesson**, **Antivibe: Open My History**, **Antivibe: Refresh Learning Path** and **Antivibe: Reset Progress**.
+
+**Your history:** `antivibe-practice/history.jsonl` gets one line (a JSON object) per event: `open`, `lesson`, `hint`, `check` (attempt number, hints used so far, each test's result and edge case, the code-review notes and your code) and `large_insert` (80+ characters arriving in one go, which is usually a paste). It stays on your machine; delete the file to start a fresh history.
 
 **Free-form hints:** in any file that is not an exercise, select some code and run **Antivibe: Get Hint**. Choose a hint level and describe the problem to get a general hint.
 
@@ -80,6 +86,8 @@ Other commands: **Antivibe: Pick an Exercise** (any exercise in an unlocked mile
 - `antivibe.apiUrl` - backend address (default `http://localhost:8000/api`)
 - `antivibe.pythonPath` - Python interpreter used to run your solutions (default `python`)
 - `antivibe.lockMilestones` - keep milestones locked until the previous one is finished (default on; turn off to open any exercise)
+- `antivibe.language` - the language the Learning Path shows: `python` or `cpp`
+- `antivibe.cppCompiler` - the C++ compiler (default `g++`)
 
 ## The Learning Path
 
@@ -87,39 +95,44 @@ Other commands: **Antivibe: Pick an Exercise** (any exercise in an unlocked mile
 
 | # | Milestone | Exercises |
 | --- | --- | --- |
-| 1 | Values, Variables & Functions | Rectangle Area, Full Name, Hours and Minutes |
+| 1 | Values, Variables & Functions | Rectangle Area, Full Name, Debug: Average of Two, Hours and Minutes |
 | 2 | Making Decisions | Even or Odd, Sign of a Number, Letter Grade, Leap Year |
-| 3 | Loops | Sum to N, Count the Vowels, Fizz Buzz, Reverse a String |
-| 4 | Lists | Largest Number, Keep the Evens, Average, Running Total |
-| 5 | Strings | Count the Words, Initials, Valid Palindrome |
-| 6 | Dictionaries & Sets | Character Count, Contains Duplicate, First Unique Character, Valid Anagram |
-| 7 | Functions, Recursion & Errors | Factorial, Safe Divide, Text to Number |
+| 3 | Loops | Sum to N, Sum of the Evens, Count a Character, Count the Vowels, Debug: Has a Digit, Sum of Digits, Reverse a String |
+| 4 | Lists | Largest Number, Index Of, Keep the Evens, Average, Fizz Buzz, Running Total, Debug: Remove the Negatives |
+| 5 | Strings | Count the Words, Capitalise Each Word, Initials, Palindrome Word, Longest Word, Debug: Remove the Spaces, Valid Palindrome |
+| 6 | Dictionaries & Sets | Character Count, Count the Different Values, Contains Duplicate, First Unique Character, Most Common Character, Valid Anagram, Group by First Letter |
+| 7 | Functions & Errors | Safe Divide, Text to Number, Parse the Scores, Primes (Two Functions) |
+| 8 | Recursion | Factorial, Power, Debug: Count Down, Sum a List Recursively, Reverse a String Recursively |
 
 ### Track 2: Object-Oriented Programming
 
 | # | Milestone | Exercises |
 | --- | --- | --- |
-| 1 | Classes & Objects | Counter, Rectangle |
-| 2 | Protecting State & Special Methods | Bank Account, Point |
-| 3 | Inheritance & Polymorphism | Animal Sounds, Shapes |
-| 4 | Building Data Structures | Stack, Queue |
+| 1 | Classes & Objects | Counter, Debug: Light Switch, Rectangle, Playlist |
+| 2 | Protecting State & Special Methods | Bank Account, Point, Inventory |
+| 3 | Inheritance & Polymorphism | Animal Sounds, Debug: Vehicles, Shapes |
+| 4 | Building Data Structures | Stack, Queue, Text Editor with Undo |
 
 ### Track 3: Data Structures & Algorithms
 
 | # | Milestone | Exercises |
 | --- | --- | --- |
-| 1 | Complexity, Arrays & Hashing | Two Sum, Missing Number |
-| 2 | Two Pointers | Merge Two Sorted Lists, Is Subsequence |
-| 3 | Stacks in Action | Valid Parentheses, Reverse Polish Notation |
-| 4 | Binary Search | Binary Search, First Element At Least X |
-| 5 | Linked Lists | Linked List, Reverse a Linked List |
-| 6 | From Recursion to Dynamic Programming | Climbing Stairs, Maximum Subarray |
+| 1 | Complexity, Arrays & Hashing | Pair With Sum, Two Sum, Missing Number |
+| 2 | Two Pointers | Pair Sum in a Sorted List, Merge Two Sorted Lists, Is Subsequence |
+| 3 | Stacks in Action | Valid Parentheses, Remove Adjacent Duplicates, Reverse Polish Notation |
+| 4 | Binary Search | Binary Search, Whole Square Root, First Element At Least X |
+| 5 | Linked Lists | Search a Linked List, Linked List, Reverse a Linked List |
+| 6 | Binary Search Trees | Insert and Search, In-Order Traversal, Height, Minimum and Maximum, Debug: Is It a BST?, Remove a Value |
+| 7 | From Recursion to Dynamic Programming | Fibonacci, Fast, Climbing Stairs, Maximum Subarray |
+
+**Debug exercises** start from code that almost works. Your job is to trace it, find the bug and fix it - the skill you need most when your own code fails.
 
 **Adding content:** the tracks live in `antivibe-backend/curriculum_python.py`, `curriculum_oop.py` and `curriculum_dsa.py`; the format is described at the top of `problems.py`. Add a reference solution to `tests/reference_solutions.py`, and `pytest` checks that the lesson and exercise are complete, that the starter code fails, and that the tests can actually be passed.
 
 ## API Endpoints
 
-- `GET /api/curriculum` - Tracks, milestones and exercise titles in learning order
+- `GET /api/languages` - Languages with a curriculum
+- `GET /api/curriculum?language=cpp` - Tracks, milestones and exercise titles in learning order (all exercise routes take `?language=`, default `python`)
 - `GET /api/milestones/{id}` - A milestone with its lesson
 - `GET /api/problems` - List all exercises
 - `GET /api/problems/{id}` - Statement, starter code, examples and test cases

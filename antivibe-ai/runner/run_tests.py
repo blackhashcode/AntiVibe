@@ -17,6 +17,7 @@ extension still has partial results if the solution hangs and gets killed:
     {"type": "load_error", "message": ..., "line": ...}
     {"type": "start", "index": i, "call": ..., "expected": ...}
     {"type": "case", "index": i, "status": "pass" | "fail" | "error", ...}
+    {"type": "review", "notes": [{"line": ..., "message": ...}]}   style advice, see review.py
     {"type": "done"}
 """
 import copy
@@ -26,52 +27,11 @@ import os
 import runpy
 import sys
 import traceback
-import types
 
-REAL_STDOUT = sys.stdout
-MAX_REPR = 300
-MAX_PRINTED = 2000
-
-
-def emit(message):
-    REAL_STDOUT.write(json.dumps(message) + "\n")
-    REAL_STDOUT.flush()
-
-
-def short_repr(value):
-    text = repr(value)
-    return text if len(text) <= MAX_REPR else text[:MAX_REPR] + "..."
-
-
-def normalize(value):
-    """Treat tuples as lists so returning (0, 1) is as good as [0, 1]."""
-    if isinstance(value, (list, tuple)):
-        return [normalize(item) for item in value]
-    return value
-
-
-def same(got, expected):
-    # bool is a subclass of int in Python; don't let 1 pass for True
-    if isinstance(got, bool) or isinstance(expected, bool):
-        return type(got) is type(expected) and got == expected
-    if isinstance(expected, list):
-        return (
-            isinstance(got, list)
-            and len(got) == len(expected)
-            and all(same(g, e) for g, e in zip(got, expected))
-        )
-    return got == expected
-
-
-def matches(got, expected, compare):
-    got, expected = normalize(got), normalize(expected)
-    if compare == "unordered" and isinstance(got, list) and isinstance(expected, list):
-        try:
-            return same(sorted(got), sorted(expected))
-        except TypeError:
-            return False
-    return same(got, expected)
-
+from judge import (
+    MAX_PRINTED, emit, explain_mismatch, matches, short_repr,
+)
+from review import review
 
 def user_line(exc, solution_path):
     """Line number in the learner's file where the exception came from."""
@@ -94,28 +54,6 @@ def is_instance_of_named(exc, class_name):
     return any(cls.__name__ == class_name for cls in type(exc).__mro__)
 
 
-def explain_mismatch(got, expected):
-    """A plain-language note for wrong answers that are really a wrong kind of value."""
-    if got is None:
-        return "Your code returned None - did you forget a `return` statement?"
-    if isinstance(got, types.GenericAlias):
-        # e.g. `return list[a, b]`, which looks like a list when printed but is a type description
-        name = got.__origin__.__name__
-        return (
-            f"`{short_repr(got)}` is not a {name} - putting square brackets straight after the word "
-            f"`{name}` describes a type instead of making a value. "
-            f"Write the values without the word `{name}` in front."
-        )
-    got, expected = normalize(got), normalize(expected)
-    both_numbers = isinstance(got, (int, float)) and isinstance(expected, (int, float))
-    if type(got) is not type(expected) and not both_numbers:
-        return (
-            f"The test expects a {type(expected).__name__}, "
-            f"but your code returned a {type(got).__name__}."
-        )
-    return None
-
-
 def display_call(test, function_name):
     if "args" in test:
         return f"{function_name}({', '.join(short_repr(arg) for arg in test['args'])})"
@@ -136,6 +74,15 @@ def evaluate(test, function, namespace):
 def main():
     solution_path = sys.argv[1]
     spec = json.load(sys.stdin)
+    language = spec.get("language", "python")
+    if language == "cpp":
+        import cpp_runner
+        cpp_runner.run(spec, solution_path)
+        return
+    if language == "java":
+        import java_runner
+        java_runner.run(spec, solution_path)
+        return
     function_name = spec.get("function")
     compare = spec.get("compare", "exact")
 
@@ -201,6 +148,11 @@ def main():
         result["printed"] = printed.getvalue()[:MAX_PRINTED]
         emit(result)
 
+    try:
+        notes = review(open(solution_path, encoding="utf-8").read())
+    except Exception:  # a review must never break the test run
+        notes = []
+    emit({"type": "review", "notes": notes})
     emit({"type": "done"})
 
 

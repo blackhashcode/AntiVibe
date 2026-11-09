@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { MilestoneSummary, ProblemSummary, Track } from './api/antivibeClient';
 import { blockingMilestone, currentMilestone, isMilestoneComplete, IsSolved, solvedCount } from './curriculum';
 
-type Node =
+export type CurriculumNode =
     | { kind: 'track'; track: Track }
     | { kind: 'milestone'; milestone: MilestoneSummary; number: number }
     | { kind: 'lesson'; milestone: MilestoneSummary }
@@ -16,7 +16,7 @@ export interface CurriculumSource {
 }
 
 /** The "Learning Path" sidebar: tracks > milestones > lesson and exercises. */
-export class CurriculumTreeProvider implements vscode.TreeDataProvider<Node> {
+export class CurriculumTreeProvider implements vscode.TreeDataProvider<CurriculumNode> {
     private readonly changed = new vscode.EventEmitter<void>();
     readonly onDidChangeTreeData = this.changed.event;
     private tracks: Track[] = [];
@@ -27,7 +27,7 @@ export class CurriculumTreeProvider implements vscode.TreeDataProvider<Node> {
         this.changed.fire();
     }
 
-    async getChildren(node?: Node): Promise<Node[]> {
+    async getChildren(node?: CurriculumNode): Promise<CurriculumNode[]> {
         if (!node) {
             this.tracks = await this.source.load() ?? [];
             return this.tracks.map(track => ({ kind: 'track', track }));
@@ -38,13 +38,13 @@ export class CurriculumTreeProvider implements vscode.TreeDataProvider<Node> {
         if (node.kind === 'milestone' && !this.isLocked(node.milestone)) {
             return [
                 { kind: 'lesson', milestone: node.milestone },
-                ...node.milestone.problems.map((problem): Node => ({ kind: 'problem', problem }))
+                ...node.milestone.problems.map((problem): CurriculumNode => ({ kind: 'problem', problem }))
             ];
         }
         return [];
     }
 
-    getTreeItem(node: Node): vscode.TreeItem {
+    getTreeItem(node: CurriculumNode): vscode.TreeItem {
         const { isSolved } = this.source;
         const current = currentMilestone(this.tracks, isSolved);
 

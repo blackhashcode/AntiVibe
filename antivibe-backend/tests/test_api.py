@@ -153,3 +153,28 @@ def test_freeform_hint_rejects_unknown_level():
     })
 
     assert response.status_code == 422
+
+
+def test_milestone_detail_has_the_quiz_but_the_outline_does_not():
+    milestone = client.get("/api/milestones/py-recursion").json()
+    assert milestone["quiz"][0]["question"]
+    assert milestone["quiz"][0]["answer"]
+
+    outline = client.get("/api/curriculum").json()["tracks"][0]["milestones"][0]
+    assert "quiz" not in outline
+
+
+def test_debug_exercise_starts_from_the_buggy_code():
+    problem = client.get("/api/problems/has-digit").json()
+
+    assert problem["function"]["name"] == "has_digit"
+    assert problem["starter"].startswith("def has_digit(s):\n    for ch in s:")
+    assert "return False" in problem["starter"]
+
+
+def test_problem_tests_carry_edge_case_labels():
+    tests = client.get("/api/problems/average").json()["tests"]
+
+    assert "edge" not in tests[0]
+    assert tests[2]["edge"] == "empty input"
+    assert tests[4]["edge"] == "negative numbers"

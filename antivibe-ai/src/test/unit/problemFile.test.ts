@@ -13,6 +13,7 @@ const PLACE = {
 
 const PROBLEM: Problem = {
     ...PLACE,
+    language: 'python',
     id: 'two-sum',
     title: 'Two Sum',
     difficulty: 'easy',
@@ -28,6 +29,7 @@ const PROBLEM: Problem = {
 
 const CLASS_PROBLEM: Problem = {
     ...PLACE,
+    language: 'python',
     id: 'bank-account',
     title: 'Bank Account',
     difficulty: 'easy',
@@ -70,6 +72,27 @@ test('a class exercise starts from its class and shows multi-line examples as co
     }
 });
 
+test('the starter asks for a plan before any code', () => {
+    const starter = buildStarter(PROBLEM);
+    const plan = starter.indexOf('# Plan - before any code');
+    assert.ok(plan > 0 && plan < starter.indexOf('def two_sum'));
+});
+
+test('code review notes appear in the results page', () => {
+    const html = renderResults(PROBLEM, {
+        cases: [{ index: 0, status: 'pass', call: 'two_sum([1], 1)', expected: '[0]', got: '[0]' }],
+        passed: 1, total: 1, allPassed: true, timedOut: false,
+        review: [{ line: 3, message: 'Use `in` <here>.' }]
+    });
+    assert.ok(html.includes('Code review'));
+    assert.ok(html.includes('<strong>Line 3:</strong> Use <code>in</code> &lt;here&gt;.'));
+
+    const clean = renderResults(PROBLEM, {
+        cases: [], passed: 0, total: 0, allPassed: true, timedOut: false, review: []
+    });
+    assert.ok(!clean.includes('Code review'));
+});
+
 test('long descriptions are wrapped into comment lines', () => {
     for (const line of buildStarter(PROBLEM).split('\n')) {
         assert.ok(line.length <= 80, `line too long: ${line}`);
@@ -90,16 +113,24 @@ test('learner output is escaped in the results page', () => {
             index: 0, status: 'fail', call: 'two_sum([2, 7, 11, 15], 9)', expected: '[0, 1]',
             got: "'<script>alert(1)</script>'"
         }],
-        passed: 0, total: 1, allPassed: false, timedOut: false
+        passed: 0, total: 1, allPassed: false, timedOut: false, review: []
     });
     assert.ok(!html.includes('<script>'));
     assert.ok(html.includes('0 of 1 tests passed'));
 });
 
+test('edge cases are labelled in the results page', () => {
+    const html = renderResults(PROBLEM, {
+        cases: [{ index: 0, status: 'fail', call: 'two_sum([], 1)', expected: '[]', got: 'None', edge: 'empty <input>' }],
+        passed: 0, total: 1, allPassed: false, timedOut: false, review: []
+    });
+    assert.ok(html.includes('<span class="edge">edge case: empty &lt;input&gt;</span>'));
+});
+
 test('multi-line test code is shown as a block in the results page', () => {
     const html = renderResults(CLASS_PROBLEM, {
         cases: [{ index: 0, status: 'pass', call: 'a = BankAccount(1)\na.balance', expected: '1', got: '1' }],
-        passed: 1, total: 1, allPassed: true, timedOut: false
+        passed: 1, total: 1, allPassed: true, timedOut: false, review: []
     });
     assert.ok(html.includes('<pre class="block">a = BankAccount(1)\na.balance</pre>'));
 });
@@ -120,12 +151,17 @@ test('a lesson renders paragraphs, inline code and code blocks, all escaped', ()
             heading: 'No code here',
             text: 'Just text.',
             code: null
-        }]
+        }],
+        quiz: [{ question: 'What is `x`?', code: 'x = 1 < 2', answer: '`True`.' }]
     };
     const html = renderLesson(milestone);
 
     assert.ok(html.includes('<p>Use <code>range(n)</code> when a &lt; b.</p><p>Second paragraph.</p>'));
     assert.ok(html.includes('<pre class="block">for i in range(3):\n    print(i &lt; 2)</pre>'));
-    assert.strictEqual(html.match(/<pre class="block">/g)?.length, 1);
+    assert.strictEqual(html.match(/<pre class="block">/g)?.length, 2);
+    // the question stays visible; only the answer is folded away
+    assert.ok(html.includes('<strong>1.</strong> What is <code>x</code>?'));
+    assert.ok(html.includes('<pre class="block">x = 1 &lt; 2</pre>'));
+    assert.match(html, /<details>\s*<summary>Show answer<\/summary>\s*<div class="answer"><p><code>True<\/code>.<\/p><\/div>/);
     assert.ok(html.includes('<li>Sum to N</li>'));
 });

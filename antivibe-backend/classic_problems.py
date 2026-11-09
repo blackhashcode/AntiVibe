@@ -64,10 +64,10 @@ _PROBLEMS = [
             {"args": ["Hello, World!"], "expected": "!dlroW ,olleH"},
         ],
         "hints": [
-            "Reversing means the last character becomes the first, the second-to-last becomes the second, and so on. How could you visit the characters in that order?",
-            "Two common approaches: walk the string from the last index down to 0 collecting characters, or swap characters from both ends moving inwards (two pointers).",
-            "Strings in Python are immutable, so you can't swap characters in place. Either collect characters in a list and join them at the end, or convert the string to a list first.",
-            "Structure (two pointers): chars = list of the characters; left starts at 0 and right at the last index; while left < right, swap the two and move both inwards; finally join chars back into a string.",
+            'Reversing means the last character becomes the first. Think about building the answer one character at a time - where does each new character have to go?',
+            'Start with an empty string and loop over s from the front. Each character you meet belongs in FRONT of everything you have collected so far.',
+            "`ch + result` puts ch in front of result; `result + ch` puts it at the end. Which one turns 'abc' into 'cba'? Try it on paper with three loop passes.",
+            'Structure: result = an empty string; for each character ch in s: set result to ch + result; after the loop, return result.',
         ],
         "questions": [
             "What is the time and space complexity of your approach?",
@@ -98,10 +98,10 @@ _PROBLEMS = [
             {"args": ["No lemon, no melon"], "expected": True},
         ],
         "hints": [
-            "A palindrome mirrors around its centre: the first meaningful character must match the last, the second must match the second-to-last, and so on.",
-            "Either clean the string first (keep only letters and digits, lower-cased) and compare it with its reverse, or use two pointers moving inwards and skip the characters that don't count.",
-            "str.isalnum() tells you whether a character is a letter or digit, and str.lower() removes case differences. With two pointers, advance each pointer past characters that fail isalnum() before comparing.",
-            "Structure (two pointers): left = 0, right = last index; while left < right: move left forward while it points at a non-alphanumeric character, move right backward likewise; if the lower-cased characters differ return False; otherwise step both inwards. Return True after the loop.",
+            'Two separate jobs are hiding here: first throw away everything that does not count (spaces, punctuation, case), then check whether what is left reads the same both ways.',
+            'Build a cleaned string: loop over s and keep only the characters that are letters or digits, in lower case. Then compare the cleaned string with its reverse.',
+            '`ch.isalnum()` is True for letters and digits; `ch.lower()` lower-cases one character. `cleaned[::-1]` is the cleaned string reversed (see the slicing part of the lesson).',
+            'Structure: cleaned = an empty string; for each ch in s: if ch.isalnum(), add ch.lower() to cleaned; finally return whether cleaned equals cleaned[::-1].',
         ],
         "questions": [
             "Which of the two approaches uses extra memory, and how much?",
@@ -199,10 +199,10 @@ _PROBLEMS = [
             {"args": ["listen", "silent"], "expected": True},
         ],
         "hints": [
-            "Two words are anagrams when they contain the same letters in the same quantities. Order is the only thing allowed to differ.",
-            "You can either put both strings into a canonical order and compare, or count how often each character appears in each string and compare the counts.",
-            "A dictionary from character to count works well: dict.get(ch, 0) + 1 increments a count that may not exist yet. Strings of different lengths can be rejected immediately.",
-            "Structure (counting): if the lengths differ return False; build a count dict from s; for each character in t, decrement its count and return False if the character is missing or its count would go below zero; return True at the end.",
+            'Two words are anagrams when they contain the same letters the same number of times. Order is the only thing allowed to differ.',
+            'You already know how to count characters into a dictionary (Character Count). What if you did that for both strings?',
+            'Two dictionaries are == when they have exactly the same keys with the same values, no matter what order the keys were added in.',
+            'Structure: build a count dict for s with a loop and get(ch, 0) + 1; build a second one for t the same way; return whether the two dicts are equal.',
         ],
         "questions": [
             "Why is the length check enough to make the one-dictionary approach correct?",
@@ -366,11 +366,11 @@ _PROBLEMS = [
         "tests": [
             {"args": [2], "expected": 2},
             {"args": [3], "expected": 3},
-            {"args": [1], "expected": 1},
+            {"edge": "smallest input", "args": [1], "expected": 1},
             {"args": [4], "expected": 5},
             {"args": [5], "expected": 8},
             {"args": [10], "expected": 89},
-            {"args": [30], "expected": 1346269},
+            {"edge": "large input (must be fast)", "args": [30], "expected": 1346269},
         ],
         "hints": [
             "Work out the answers for n = 1, 2, 3, 4 and 5 by hand and write them in a row. Do you see a pattern?",

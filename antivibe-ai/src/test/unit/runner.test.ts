@@ -69,11 +69,38 @@ test('a value of the wrong kind gets a note saying so', async () => {
     const text = (await run('def pair():\n    return "[2, 15]"\n', spec)).cases[0];
     assert.match(text.note ?? '', /expects a list, but your code returned a str/);
 
+    const words: TestSpec = { function: 'f', requires: ['f'], compare: 'exact', tests: [{ args: [], expected: ['1', 'FizzBuzz'] }] };
+    const caseOnly = (await run('def f():\n    return ["1", "Fizzbuzz"]\n', words)).cases[0];
+    assert.match(caseOnly.note ?? '', /only difference is upper\/lower case. You wrote 'Fizzbuzz' where the test expects 'FizzBuzz'/);
+    const moreWrong = (await run('def f():\n    return ["2", "Fizzbuzz"]\n', words)).cases[0];
+    assert.strictEqual(moreWrong.note, undefined);
+
     const wrongValues = (await run('def pair():\n    return [2, 16]\n', spec)).cases[0];
     assert.strictEqual(wrongValues.note, undefined);
 
     const decimal = (await run('def add(a, b):\n    return a + b + 0.5\n')).cases[0];
     assert.strictEqual(decimal.note, undefined);
+});
+
+test('the runner reviews the code and reports notes with line numbers', async () => {
+    const spec: TestSpec = { function: 'is_even', requires: ['is_even'], compare: 'exact', tests: [{ args: [4], expected: true }] };
+    const result = await run('def is_even(n):\n    if n % 2 == 0:\n        return True\n    else:\n        return False\n', spec);
+    assert.strictEqual(result.allPassed, true);
+    assert.strictEqual(result.review.length, 1);
+    assert.strictEqual(result.review[0].line, 2);
+    assert.match(result.review[0].message, /return <the condition>/);
+
+    const clean = await run('def is_even(n):\n    return n % 2 == 0\n', spec);
+    assert.deepStrictEqual(clean.review, []);
+});
+
+test('edge-case labels from the spec are carried into the results', async () => {
+    const spec: TestSpec = {
+        function: 'add', requires: ['add'], compare: 'exact',
+        tests: [{ args: [1, 2], expected: 3 }, { args: [0, 0], expected: 0, edge: 'zero' }]
+    };
+    const result = await run('def add(a, b):\n    return a + b\n', spec);
+    assert.deepStrictEqual(result.cases.map(c => c.edge), [undefined, 'zero']);
 });
 
 test('an exception reports its type and the line in the solution', async () => {

@@ -44,6 +44,26 @@ function page(title: string, body: string): string {
             .card.pass { border-left-color: var(--vscode-testing-iconPassed, #2ea043); }
             .card.fail, .card.error, .card.timeout { border-left-color: var(--vscode-testing-iconFailed, #f85149); }
             .card.not_run { opacity: 0.6; }
+            .edge {
+                font-size: 0.8em;
+                font-weight: normal;
+                color: var(--vscode-descriptionForeground);
+                border: 1px solid var(--vscode-editorWidget-border, var(--vscode-descriptionForeground));
+                border-radius: 10px;
+                padding: 1px 8px;
+                margin-left: 6px;
+            }
+            .card.review { border-left-color: var(--vscode-textLink-foreground); }
+            .card.review li { margin: 6px 0; }
+            div.quiz {
+                background: var(--vscode-editorWidget-background);
+                border: 1px solid var(--vscode-editorWidget-border, transparent);
+                border-radius: 6px;
+                padding: 10px 14px;
+                margin: 10px 0;
+            }
+            div.quiz summary { cursor: pointer; color: var(--vscode-textLink-foreground); margin-top: 8px; }
+            div.quiz .answer { margin-top: 6px; }
             .muted { color: var(--vscode-descriptionForeground); }
             .label { color: var(--vscode-descriptionForeground); display: inline-block; min-width: 5.5em; }
             .next-step {
@@ -143,12 +163,30 @@ export function renderLesson(milestone: Milestone): string {
         ${section.text.split(/\n\s*\n/).map(paragraph => `<p>${inlineCode(paragraph)}</p>`).join('')}
         ${section.code ? `<pre class="block">${escapeHtml(section.code)}</pre>` : ''}`).join('');
 
+    const paragraphs = (text: string) =>
+        text.split(/\n\s*\n/).map(paragraph => `<p>${inlineCode(paragraph)}</p>`).join('');
+    // Only the answer sits inside <details>, so the question stays visible while it is closed
+    const quiz = milestone.quiz.length === 0 ? '' : `
+        <h2>✍️ Check yourself</h2>
+        <p class="muted">Work each one out in your head or on paper <em>before</em> opening the answer. Don't run the code - predicting what code does is the skill.</p>
+        ${milestone.quiz.map((item, index) => `
+            <div class="quiz">
+                <strong>${index + 1}.</strong> ${inlineCode(item.question)}
+                ${item.code ? `<pre class="block">${escapeHtml(item.code)}</pre>` : ''}
+                <details>
+                    <summary>Show answer</summary>
+                    <div class="answer">${paragraphs(item.answer)}</div>
+                </details>
+            </div>`).join('')}`;
+
     return page(milestone.title, `
         <div class="lesson">
             <div class="muted">${escapeHtml(milestone.track)}</div>
             <h1>📖 ${escapeHtml(milestone.title)}</h1>
             <p>${escapeHtml(milestone.summary)}</p>
             ${sections}
+
+            ${quiz}
 
             <h2>Exercises</h2>
             ${list(milestone.problems.map(problem => problem.title))}
@@ -193,7 +231,7 @@ function renderCase(result: CaseResult): string {
 
     return `
         <div class="card ${result.status}">
-            <h2>Test ${result.index + 1}: ${STATUS_TITLES[result.status]}</h2>
+            <h2>Test ${result.index + 1}: ${STATUS_TITLES[result.status]}${result.edge ? ` <span class="edge">edge case: ${escapeHtml(result.edge)}</span>` : ''}</h2>
             ${rows.join('')}
         </div>`;
 }
@@ -220,6 +258,18 @@ export function renderResults(problem: Problem, result: RunResult): string {
             <p><strong>${summary}</strong></p>
             ${stopped}
             ${result.cases.map(renderCase).join('')}`;
+    }
+
+    if (result.review.length > 0) {
+        const intro = result.allPassed
+            ? 'Your code works. These changes would make it clearer - try them, then check again:'
+            : 'Separate from the failing tests, a few things about how the code is written:';
+        body += `
+            <div class="card review">
+                <h2>🧑‍🏫 Code review</h2>
+                <p class="muted">${intro}</p>
+                <ul>${result.review.map(n => `<li><strong>Line ${n.line}:</strong> ${inlineCode(n.message)}</li>`).join('')}</ul>
+            </div>`;
     }
 
     if (result.allPassed) {

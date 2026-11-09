@@ -33,10 +33,23 @@ export interface TestCase {
     check?: string;
     expected?: unknown;
     raises?: string;
+    /** What kind of edge case this test covers, e.g. "empty input" */
+    edge?: string;
+}
+
+/** The function a learner writes in a compiled language. Types are described in the backend's languages.py */
+export interface Signature {
+    name: string;
+    /** [name, type] or [name, type, default value] */
+    params: unknown[][];
+    returns: string;
 }
 
 export interface Problem extends ProblemSummary {
+    language: string;
     description: string;
+    /** Set for C++ and Java problems solved by one function */
+    signature?: Signature | null;
     /** Set for problems solved by a single function; null for class-based problems */
     function: { name: string; params: string[] } | null;
     /** The code a learner starts from */
@@ -74,8 +87,16 @@ export interface LessonSection {
     code?: string | null;
 }
 
+/** A "predict the output" question shown after a lesson, with the answer hidden */
+export interface QuizItem {
+    question: string;
+    code?: string | null;
+    answer: string;
+}
+
 export interface Milestone extends MilestoneSummary {
     lesson: LessonSection[];
+    quiz: QuizItem[];
 }
 
 export interface Track {
@@ -96,23 +117,31 @@ export class AntivibeClient {
     constructor(private readonly getBaseUrl: () => string) {}
 
     /** Tracks, milestones and problem titles in learning order. */
-    async getCurriculum(): Promise<Track[]> {
-        const data = await this.request<{ tracks: Track[] }>('/curriculum');
+    async getCurriculum(language: string): Promise<Track[]> {
+        const data = await this.request<{ tracks: Track[] }>(`/curriculum?language=${language}`);
         return data.tracks;
     }
 
-    /** A milestone including its lesson. */
-    async getMilestone(milestoneId: string): Promise<Milestone> {
-        return this.request<Milestone>(`/milestones/${encodeURIComponent(milestoneId)}`);
+    /** The languages the backend has a curriculum for. */
+    async getLanguages(): Promise<{ id: string; name: string }[]> {
+        const data = await this.request<{ languages: { id: string; name: string }[] }>('/languages');
+        return data.languages;
     }
 
-    async getProblem(problemId: string): Promise<Problem> {
-        return this.request<Problem>(`/problems/${encodeURIComponent(problemId)}`);
+    /** A milestone including its lesson. */
+    async getMilestone(milestoneId: string, language: string): Promise<Milestone> {
+        return this.request<Milestone>(`/milestones/${encodeURIComponent(milestoneId)}?language=${language}`);
+    }
+
+    async getProblem(problemId: string, language: string): Promise<Problem> {
+        return this.request<Problem>(`/problems/${encodeURIComponent(problemId)}?language=${language}`);
     }
 
     /** Hints 1..upTo for a practice problem. */
-    async getProblemHints(problemId: string, upTo: number): Promise<ProblemHints> {
-        return this.request<ProblemHints>(`/problems/${encodeURIComponent(problemId)}/hints?upto=${upTo}`);
+    async getProblemHints(problemId: string, upTo: number, language: string): Promise<ProblemHints> {
+        return this.request<ProblemHints>(
+            `/problems/${encodeURIComponent(problemId)}/hints?upto=${upTo}&language=${language}`
+        );
     }
 
     /** Hint for code that isn't one of the practice problems. */
