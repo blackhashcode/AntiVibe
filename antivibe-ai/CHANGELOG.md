@@ -16,6 +16,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ### Fixed
 
+- With no folder open, exercises opened as unsaved "Untitled" documents that needed Save As every time. They are now real files (in `~/antivibe` when no folder is open, or `antivibe.practiceFolder`), saved automatically, and saved before every check
 - The Fibonacci test used fib(80), which JavaScript rounds; it now uses fib(70), and a test guards against unsafe numbers
 
 ## [0.3.0]

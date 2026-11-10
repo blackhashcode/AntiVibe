@@ -74,6 +74,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('antivibe.openHistory', () => guarded(openHistory)),
         vscode.commands.registerCommand('antivibe.chooseLanguage', () => guarded(chooseLanguage)),
         vscode.workspace.onDidChangeTextDocument(recordLargeInserts),
+        vscode.workspace.onDidChangeTextDocument(autoSaveExercise),
         vscode.workspace.onDidChangeConfiguration(event => {
             if (event.affectsConfiguration('antivibe')) {
                 if (event.affectsConfiguration('antivibe.apiUrl')) {
@@ -126,11 +127,71 @@ async function guarded<T>(command: () => Promise<T>): Promise<T | undefined> {
 
 /** The history lives next to the practice files, so it can be read (and analysed) like any file. */
 function historyFile(): string | undefined {
+    return path.join(practiceRoot().uri.fsPath, PRACTICE_FOLDER, HISTORY_FILE);
+}
+
+/**
+ * The folder that holds antivibe-practice/: the "antivibe.practiceFolder" setting if set,
+ * else the open workspace folder, else ~/antivibe. Exercises are always real files,
+ * so they can be saved (and auto-saved) without a Save As dialog.
+ */
+function practiceRoot(): { uri: vscode.Uri; fallback: boolean } {
+    const configured = getConfig().get<string>('practiceFolder', '').trim();
+    if (configured) {
+        return { uri: vscode.Uri.file(resolveHome(configured)), fallback: false };
+    }
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (workspaceFolder) {
-        return path.join(workspaceFolder.uri.fsPath, PRACTICE_FOLDER, HISTORY_FILE);
+        return { uri: workspaceFolder.uri, fallback: false };
     }
-    return path.join(extensionContext.globalStorageUri.fsPath, HISTORY_FILE);
+    return { uri: vscode.Uri.file(path.join(os.homedir(), 'antivibe')), fallback: true };
+}
+
+function resolveHome(folder: string): string {
+    return folder === '~' || folder.startsWith('~/') || folder.startsWith('~\\')
+        ? path.join(os.homedir(), folder.slice(1))
+        : folder;
+}
+
+let toldAboutFallback = false;
+
+/** Once per session: say where exercises are kept when no folder is open. */
+function tellAboutFallbackFolder(root: vscode.Uri) {
+    if (toldAboutFallback) {
+        return;
+    }
+    toldAboutFallback = true;
+    const where = path.join(root.fsPath, PRACTICE_FOLDER);
+    vscode.window.showInformationMessage(
+        `No folder is open, so Antivibe keeps your exercises in ${where}. They are saved automatically.`,
+        'Open That Folder'
+    ).then(choice => {
+        if (choice) {
+            vscode.commands.executeCommand('vscode.openFolder', root, { forceNewWindow: false });
+        }
+    });
+}
+
+// Exercise files save themselves shortly after the last keystroke
+const AUTO_SAVE_DELAY_MS = 1000;
+const pendingSaves = new Map<string, NodeJS.Timeout>();
+
+function autoSaveExercise(event: vscode.TextDocumentChangeEvent) {
+    const document = event.document;
+    if (!getConfig().get<boolean>('autoSave', true) || document.uri.scheme !== 'file' || !document.isDirty) {
+        return;
+    }
+    if (!findProblemId(document.getText())) {
+        return;
+    }
+    const key = document.uri.toString();
+    clearTimeout(pendingSaves.get(key));
+    pendingSaves.set(key, setTimeout(() => {
+        pendingSaves.delete(key);
+        if (document.isDirty && !document.isClosed) {
+            void document.save();
+        }
+    }, AUTO_SAVE_DELAY_MS));
 }
 
 async function openHistory() {
@@ -300,11 +361,7 @@ async function resetProgress() {
 
 /** Move a language's exercise files into <its folder>/archive/<date-time>. Returns that folder, if anything moved. */
 async function archiveSolutions(language: Language): Promise<string | undefined> {
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    if (!workspaceFolder) {
-        return undefined;
-    }
-    const folder = vscode.Uri.joinPath(workspaceFolder.uri, ...practiceFolder(language));
+    const folder = vscode.Uri.joinPath(practiceRoot().uri, ...practiceFolder(language));
     let entries: [string, vscode.FileType][];
     try {
         entries = await vscode.workspace.fs.readDirectory(folder);
@@ -473,15 +530,8 @@ async function pickProblem(tracks: Track[], language: Language): Promise<string 
 
 /** Open the learner's file for a problem, creating it from the starter if it doesn't exist yet. */
 async function openPracticeDocument(problem: Problem, language: Language): Promise<vscode.TextDocument> {
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    if (!workspaceFolder) {
-        return vscode.workspace.openTextDocument({
-            language: LANGUAGES[language].vscodeIds[0],
-            content: buildStarter(problem, language)
-        });
-    }
-
-    const folder = vscode.Uri.joinPath(workspaceFolder.uri, ...practiceFolder(language));
+    const root = practiceRoot();
+    const folder = vscode.Uri.joinPath(root.uri, ...practiceFolder(language));
     const file = vscode.Uri.joinPath(folder, fileNameFor(problem, language));
     try {
         await vscode.workspace.fs.stat(file);
@@ -489,6 +539,9 @@ async function openPracticeDocument(problem: Problem, language: Language): Promi
         // Never overwrite an existing attempt - only write the starter the first time
         await vscode.workspace.fs.createDirectory(folder);
         await vscode.workspace.fs.writeFile(file, Buffer.from(buildStarter(problem, language), 'utf8'));
+    }
+    if (root.fallback) {
+        tellAboutFallbackFolder(root.uri);
     }
     return vscode.workspace.openTextDocument(file);
 }
@@ -609,6 +662,10 @@ async function checkSolution(): Promise<RunResult | undefined> {
     const { language } = exercise;
     const problem = await antivibeClient.getProblem(exercise.problemId, language);
     const code = editor.document.getText();
+    // Checking also saves, so a passing solution is never left only in the editor
+    if (editor.document.isDirty && editor.document.uri.scheme === 'file') {
+        await editor.document.save();
+    }
     const result = await vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
         title: language === 'python'

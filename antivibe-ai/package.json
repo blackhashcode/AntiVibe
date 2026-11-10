@@ -172,6 +172,16 @@
                     "type": "string",
                     "default": "g++",
                     "description": "C++ compiler used to build your C++ solutions (g++ or clang++)."
+                },
+                "antivibe.autoSave": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Save exercise files automatically a moment after you stop typing (and always before a check)."
+                },
+                "antivibe.practiceFolder": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Folder to keep the antivibe-practice exercises in. Empty: the open folder, or ~/antivibe when no folder is open."
                 }
             }
         }

@@ -60,7 +60,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 uvicorn main:app --reload --port 8000
 ```
 
-2. **Run the VS Code Extension**: open the `antivibe-ai` folder in VS Code, run `npm run compile`, then press `F5` to launch the extension development window. Open a folder in that window so your practice files have somewhere to live.
+2. **Run the VS Code Extension**: open the `antivibe-ai` folder in VS Code, run `npm run compile`, then press `F5` to launch the extension development window. Your exercise files are kept in `antivibe-practice/` inside the folder you have open - or in `~/antivibe/antivibe-practice` if no folder is open (set `antivibe.practiceFolder` to choose another place). They are saved automatically, so there is never a Save As dialog.
 
 ### Usage
 
@@ -88,6 +88,8 @@ Other commands: **Antivibe: Pick an Exercise** (any exercise in an unlocked mile
 - `antivibe.lockMilestones` - keep milestones locked until the previous one is finished (default on; turn off to open any exercise)
 - `antivibe.language` - the language the Learning Path shows: `python` or `cpp`
 - `antivibe.cppCompiler` - the C++ compiler (default `g++`)
+- `antivibe.autoSave` - save exercise files automatically a moment after you stop typing (default on); a check always saves too
+- `antivibe.practiceFolder` - where to keep `antivibe-practice/` (default: the open folder, or `~/antivibe`)
 
 ## The Learning Path
 

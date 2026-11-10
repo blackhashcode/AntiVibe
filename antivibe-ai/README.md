@@ -25,6 +25,8 @@ Learn Python, object-oriented programming and data structures & algorithms insid
 - `antivibe.lockMilestones`: Keep each milestone locked until the one before it is finished (default `true`)
 - `antivibe.language`: `python` or `cpp`
 - `antivibe.cppCompiler`: C++ compiler (default `g++`)
+- `antivibe.autoSave`: Save exercise files automatically (default `true`)
+- `antivibe.practiceFolder`: Where to keep `antivibe-practice/` - default: the open folder, or `~/antivibe` when none is open
 
 ## Known Issues
 

@@ -170,6 +170,25 @@ export async function run(): Promise<void> {
         .trim().split('\n').map(line => JSON.parse(line)).filter(e => e.language === 'cpp');
     assert.ok(cppEvents.some(e => e.event === 'check' && e.problem === 'rectangle-area' && e.all_passed));
 
+    // Exercise files save themselves shortly after typing stops
+    await vscode.workspace.getConfiguration('antivibe').update('language', 'python', vscode.ConfigurationTarget.Workspace);
+    await start('rectangle-area');
+    await replaceInEditor('return width * height', 'return height * width');
+    assert.ok(activeEditor().document.isDirty);
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    assert.strictEqual(activeEditor().document.isDirty, false, 'the exercise should have been auto-saved');
+
+    // The practice folder can live anywhere, e.g. when no folder is open
+    const elsewhere = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'somewhere-else');
+    await vscode.workspace.getConfiguration('antivibe').update('practiceFolder', elsewhere.fsPath, vscode.ConfigurationTarget.Workspace);
+    await start('full-name');
+    assert.strictEqual(
+        activeEditor().document.uri.fsPath.toLowerCase(),
+        vscode.Uri.joinPath(elsewhere, 'antivibe-practice', 'full_name.py').fsPath.toLowerCase()
+    );
+    assert.strictEqual(activeEditor().document.isUntitled, false);
+    await vscode.workspace.getConfiguration('antivibe').update('practiceFolder', undefined, vscode.ConfigurationTarget.Workspace);
+
     // Checking a file that isn't an exercise is refused politely
     const other = await vscode.workspace.openTextDocument({ language: 'python', content: 'x = 1\n' });
     await vscode.window.showTextDocument(other);
